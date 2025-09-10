@@ -57,8 +57,8 @@
     "sass": "^1.64.2",
     "ts-jest": "^29.1.1",
     "typescript": "^5.1.6",
-    "vite": "^4.5.3",
-    "vite-plugin-cesium": "^1.0.3",
+    "vite": "^7.1.5",
+    "vite-plugin-cesium": "^1.2.23",
     "vite-plugin-electron": "^0.13.0-beta.1",
     "vite-plugin-electron-renderer": "^0.14.5"
   },
