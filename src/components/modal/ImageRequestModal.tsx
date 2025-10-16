@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
 
 import Autosuggest from "@cloudscape-design/components/autosuggest";
 import Button from "@cloudscape-design/components/button";
@@ -13,7 +13,7 @@ import Multiselect from "@cloudscape-design/components/multiselect";
 import Select  from "@cloudscape-design/components/select";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import { Fragment, useContext, useEffect, useState } from "react";
-import { CesiumContext } from "resium";
+import { CesiumContext, Viewer as ResiumViewer } from "resium";
 import { Color } from "cesium";
 import { v4 as uuidv4 } from "uuid";
 
@@ -42,21 +42,33 @@ async function loadResults(
     jobName: string,
     jobId: string,
     resultsColor: string,
-    setShowCredsExpiredAlert: any
+    setShowCredsExpiredAlert: any,
+    setImageRequestStatus: any
 ) {
+  let totalFeatures = 0;
   for (const output of outputs) {
     if (output.type === "S3") {
       console.log("Loading results from S3");
       const s3Object = `${jobName}/${jobId}.geojson`
-      await loadS3GeoJson(
+      const featureCount = await loadS3GeoJson(
           cesium,
           output.bucket,
           s3Object,
           resultsColor,
           setShowCredsExpiredAlert
       );
+      totalFeatures += featureCount;
     }
   }
+
+  // Update the status message with the feature count
+  setImageRequestStatus((prevStatus: { state: string; data: Record<string, any> }) => ({
+    ...prevStatus,
+    data: {
+      ...prevStatus.data,
+      featureCount: totalFeatures
+    }
+  }));
 }
 
 const NewRequestModal = ({
@@ -197,14 +209,18 @@ const NewRequestModal = ({
         jobName: string,
         jobId: string
     ) => {
-      await loadResults(
-          cesium,
-          outputs,
-          jobName,
-          jobId,
-          resultsColor.value,
-          setShowCredsExpiredAlert
-      );
+      // Only load results if we haven't already loaded them
+      if (!imageRequestStatus.data.featureCount) {
+        await loadResults(
+            cesium,
+            outputs,
+            jobName,
+            jobId,
+            resultsColor.value,
+            setShowCredsExpiredAlert,
+            setImageRequestStatus
+        );
+      }
     };
     if (imageRequestStatus.state == "success") {
       getData(
@@ -214,7 +230,7 @@ const NewRequestModal = ({
           imageRequestStatus.data.jobId
       );
     }
-  }, [imageRequestStatus, showCredsExpiredAlert]);
+  }, [imageRequestStatus.state, showCredsExpiredAlert]);
 
   return (
       <div>
@@ -247,6 +263,20 @@ const NewRequestModal = ({
                             setShowImageRequestModal(false);
                             const jobId: string = uuidv4();
                             const imageId: string = `${jobId}:${s3Uri}`;
+
+                            // Wait for viewer to be initialized
+                            let retryCount = 0;
+                            const maxRetries = 10;
+                            while (!cesium?.viewer && retryCount < maxRetries) {
+                              await new Promise(resolve => setTimeout(resolve, 100));
+                              retryCount++;
+                            }
+
+                            if (!cesium?.viewer) {
+                              console.error('Cesium viewer is not initialized after waiting');
+                              return;
+                            }
+
                             await runModelOnImage(
                                 jobId,
                                 s3Uri,
@@ -269,8 +299,9 @@ const NewRequestModal = ({
                                 setImageRequestStatus,
                                 setShowCredsExpiredAlert
                             );
+
                             await loadImageInCesium(
-                                cesium,
+                                { viewer: cesium.viewer as any },
                                 bucketValue,
                                 imageValue,
                                 imageId,

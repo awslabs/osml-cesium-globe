@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
 
 import {
   GetQueueUrlCommand,
@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/client-sqs";
 
 import {
-  ACCOUNT,
+  getAccountId,
   getAWSCreds,
   KINESIS_RESULTS_STREAM_PREFIX,
   MONITOR_IMAGE_STATUS_INTERVAL_SECONDS,
@@ -63,7 +63,7 @@ export async function runModelOnImage(
   setShowCredsExpiredAlert: any
 ): Promise<void> {
   setImageRequestStatus({ state: "loading", data: {} });
-  const imageProcessingRequest = buildImageProcessingRequest(
+  const imageProcessingRequest = await buildImageProcessingRequest(
     jobId,
     s3Uri,
     imageReadRole,
@@ -151,7 +151,13 @@ async function monitorJobStatus(
               const processingDuration =
                 messageAttributes.processing_duration.Value;
               done = true;
-              setImageRequestStatus({ state: "success", data: resultData });
+              setImageRequestStatus({
+                state: "success",
+                data: {
+                  ...resultData,
+                  processingDuration: processingDuration
+                }
+              });
               console.log(
                 `\tSUCCESS message found!  Image took ${processingDuration} seconds to process`
               );
@@ -251,7 +257,7 @@ function build_feature_distillation_obj(
   }
 }
 
-function buildImageProcessingRequest(
+async function buildImageProcessingRequest(
   jobId: string,
   s3Uri: string,
   imageReadRole: string,
@@ -269,10 +275,11 @@ function buildImageProcessingRequest(
   featureDistillationSigma: number,
   roiWkt: string,
   featureProperties: string
-): ImageRequest {
+): Promise<ImageRequest> {
   const jobName: string = `test_${jobId}`;
-  const resultStream = `${KINESIS_RESULTS_STREAM_PREFIX}-${ACCOUNT}`;
-  const resultBucket = `${S3_RESULTS_BUCKET_PREFIX}-${ACCOUNT}`;
+  const accountId = await getAccountId();
+  const resultStream = `${KINESIS_RESULTS_STREAM_PREFIX}-${accountId}`;
+  const resultBucket = `${S3_RESULTS_BUCKET_PREFIX}-${accountId}`;
   const processor = {
     name: modelValue,
     type: modelInvokeModeValue,

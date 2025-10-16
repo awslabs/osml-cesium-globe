@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
 
 import {
   Box,
@@ -37,9 +37,9 @@ const LoadDataModal = ({
 
   const displayData = () => {
     if (activeTabId == "S3") {
-      if (s3Bucket && s3Object && cesium.viewer) {
+      if (s3Bucket && s3Object && cesium?.viewer) {
         void loadS3GeoJson(
-          cesium,
+          { viewer: cesium.viewer as any },
           s3Bucket,
           s3Object,
           DEFAULT_RESULTS_COLOR_OPTION.value,

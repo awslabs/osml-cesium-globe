@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
 
 import { join } from "node:path";
 
@@ -63,7 +63,10 @@ const getAWSAccountId = async (): Promise<string> => {
   return String(response.Account);
 };
 
-export const ACCOUNT: string = await getAWSAccountId();
+// Export a function to get the account ID instead of using top-level await
+export const getAccountId = async (): Promise<string> => {
+  return await getAWSAccountId();
+};
 
 // default image request values
 export const DEFAULT_MODEL_INVOKE_MODE: string = "SM_ENDPOINT";
@@ -82,8 +85,8 @@ export const DEFAULT_RESULTS_COLOR_OPTION: { label: string; value: string } = {
 export const DEFAULT_RESULTS_LINE_ALPHA: number = 0.9;
 export const DEFAULT_RESULTS_FILL_ALPHA: number = 0.3;
 
-export const ZOOM_MAX: number = 17;
-export const ZOOM_MIN: number = 10;
+export const ZOOM_MAX: number = 18;
+export const ZOOM_MIN: number = 7;
 
 // sqs retry
 export const MONITOR_IMAGE_STATUS_RETRIES: number = 1000;

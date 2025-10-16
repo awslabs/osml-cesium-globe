@@ -1,43 +1,77 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
 
-import StatusIndicator from "@cloudscape-design/components/status-indicator";
+import { Alert } from "@cloudscape-design/components";
+
+interface ImageRequestStatusProps {
+  imageRequestStatus: {
+    state: string;
+    data: Record<string, any>;
+  };
+  setImageRequestStatus: (status: { state: string; data: Record<string, any> }) => void;
+}
+
+const statusMessages = {
+  loading: {
+    type: "info" as const,
+    title: "Submitting Request",
+    message: "Your image processing request is being submitted. Please wait..."
+  },
+  pending: {
+    type: "info" as const,
+    title: "Request Pending",
+    message: "Your request is in the queue and will be processed shortly."
+  },
+  "in-progress": {
+    type: "info" as const,
+    title: "Processing",
+    message: "Your image is being processed. This may take a few minutes..."
+  },
+  success: {
+    type: "success" as const,
+    title: "Success",
+    message: (data: Record<string, any>) =>
+      `Your image has been successfully processed and detected ${data.featureCount || 0} features in ${data.processingDuration || 0} seconds.`
+  },
+  error: {
+    type: "error" as const,
+    title: "Error",
+    message: "There was an error processing your request. Please try again."
+  },
+  warning: {
+    type: "warning" as const,
+    title: "Partial Success",
+    message: "Some features were processed successfully, but there were some issues."
+  }
+};
 
 const ImageRequestStatus = ({
-  imageRequestStatus
-}: {
-  imageRequestStatus: any;
-  setImageRequestStatus: any;
-}) => {
-  const validImageRequestSatusValues = new Map<string, string>();
-  validImageRequestSatusValues.set("loading", "Submitting image request...");
-  validImageRequestSatusValues.set("pending", "Image request pending...");
-  validImageRequestSatusValues.set("in-progress", "Request in progress...");
-  validImageRequestSatusValues.set("success", "Request succeeded!");
-  validImageRequestSatusValues.set("error", "Request failed!");
-  validImageRequestSatusValues.set("warning", "Request partially succeeded!");
-  if (validImageRequestSatusValues.has(imageRequestStatus.state)) {
-    return (
-      <div>
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 100,
-            backgroundColor: "lightskyblue",
-            opacity: 0.9,
-            borderRadius: 5,
-            padding: 5
-          }}
-        >
-          <StatusIndicator type={imageRequestStatus.state}>
-            {validImageRequestSatusValues.get(imageRequestStatus.state)}
-          </StatusIndicator>
-        </div>
-      </div>
-    );
-  } else {
-    return <div></div>;
+  imageRequestStatus,
+  setImageRequestStatus
+}: ImageRequestStatusProps) => {
+  const status = statusMessages[imageRequestStatus.state as keyof typeof statusMessages];
+
+  if (!status) {
+    return null;
   }
+
+  const message = typeof status.message === 'function'
+    ? status.message(imageRequestStatus.data)
+    : status.message;
+
+  return (
+    <Alert
+      type={status.type}
+      header={status.title}
+      dismissible
+      onDismiss={() => {
+        if (imageRequestStatus.state === "success" || imageRequestStatus.state === "error") {
+          setImageRequestStatus({ state: "idle", data: {} });
+        }
+      }}
+    >
+      {message}
+    </Alert>
+  );
 };
 
 export default ImageRequestStatus;

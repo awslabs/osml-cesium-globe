@@ -1,4 +1,4 @@
-// Copyright 2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2024-2025 Amazon.com, Inc. or its affiliates.
 
 import * as Cesium from "cesium";
 
