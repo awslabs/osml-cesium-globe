@@ -1,0 +1,15 @@
+/* Copyright 2023-2025 Amazon.com, Inc. or its affiliates. */
+
+.logo-container {
+  position: absolute;
+  bottom: 25px;
+  right: 5px;
+  z-index: 1;
+  padding: 10px;
+}
+
+.logo-image {
+  height: 10vh;
+  width: auto;
+  display: block;
+}
