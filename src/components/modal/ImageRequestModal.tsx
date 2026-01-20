@@ -1,4 +1,4 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import Autosuggest from "@cloudscape-design/components/autosuggest";
 import Button from "@cloudscape-design/components/button";
@@ -122,6 +122,7 @@ const NewRequestModal = ({
       useState(true);
   const [roiWkt, setRoiWkt] = useState("");
   const [featureProperties, setFeatureProperties] = useState("");
+  const [textPrompt, setTextPrompt] = useState("");
   const [resultsColor, setResultsColor] =
       useState(DEFAULT_RESULTS_COLOR_OPTION);
 
@@ -295,6 +296,7 @@ const NewRequestModal = ({
                                 featureDistillationSigma,
                                 roiWkt,
                                 featureProperties,
+                                textPrompt,
                                 imageRequestStatus,
                                 setImageRequestStatus,
                                 setShowCredsExpiredAlert
@@ -317,7 +319,10 @@ const NewRequestModal = ({
               >
                 <Container>
                   <SpaceBetween direction="vertical" size="l">
-                    <FormField label="Bucket">
+                    <FormField
+                      label="Bucket"
+                      description="S3 bucket containing the image to be processed."
+                    >
                       <Autosuggest
                           onChange={({ detail }) => {
                             setBucketValue(detail.value);
@@ -338,7 +343,10 @@ const NewRequestModal = ({
                           statusType={bucketStatus}
                       />
                     </FormField>
-                    <FormField label="Image">
+                    <FormField
+                      label="Image"
+                      description="S3 object key (path) to the image file within the selected bucket."
+                    >
                       <Autosuggest
                           onChange={({ detail }) => setImageValue(detail.value)}
                           value={imageValue}
@@ -353,14 +361,20 @@ const NewRequestModal = ({
                       />
                     </FormField>
                     <ExpandableSection headerText="Image Options">
-                      <FormField label="Image Read Role">
+                      <FormField
+                        label="Image Read Role"
+                        description="IAM role ARN used to read the image from S3. Leave empty to use default credentials."
+                      >
                         <Input
                             onChange={({detail}) => setImageReadRole(detail.value)}
                             value={imageReadRole}
                         />
                       </FormField>
                     </ExpandableSection>
-                    <FormField label="Model">
+                    <FormField
+                      label="Model"
+                      description="Name of the SageMaker model endpoint to use for image processing."
+                    >
                       <Autosuggest
                           onChange={({ detail }) => setModelValue(detail.value)}
                           value={modelValue}
@@ -373,7 +387,10 @@ const NewRequestModal = ({
                       />
                     </FormField>
                     <ExpandableSection headerText="Model Options">
-                      <FormField label="Model Invoke Mode">
+                      <FormField
+                        label="Model Invoke Mode"
+                        description="How to invoke the model: NONE (no invocation), SM_ENDPOINT (SageMaker endpoint), or HTTP_ENDPOINT (HTTP endpoint)."
+                      >
                         <Autosuggest
                             onChange={({detail}) => setModelInvokeModeValue(detail.value)}
                             value={modelInvokeModeValue}
@@ -388,14 +405,20 @@ const NewRequestModal = ({
                             empty=""
                         />
                       </FormField>
-                      <FormField label="Model Invocation Role">
+                      <FormField
+                        label="Model Invocation Role"
+                        description="IAM role ARN assumed for invoking the model endpoint. Leave empty to use default credentials."
+                      >
                         <Input
                             onChange={({detail}) => setModelInvokeRole(detail.value)}
                             value={modelInvokeRole}
                         />
                       </FormField>
                     </ExpandableSection>
-                    <FormField label="Outputs">
+                    <FormField
+                      label="Outputs"
+                      description="Where to send the processing results. S3 stores results as GeoJSON files, Kinesis streams results in real-time."
+                    >
                       <Multiselect
                           selectedOptions={selectedOutputs}
                           onChange={({ detail }) => {
@@ -424,7 +447,10 @@ const NewRequestModal = ({
                       />
                     </FormField>
                     <ExpandableSection headerText="Tile Options">
-                      <FormField label="Tile Size (px)">
+                      <FormField
+                        label="Tile Size (px)"
+                        description="Maximum dimensions of image tiles in pixels. The image will be split into tiles of this size for processing. Must keep tiles under 6MB for SageMaker endpoints."
+                      >
                         <Input
                             onChange={({detail}) => setTileSizeValue(parseInt(detail.value))}
                             value={tileSizeValue.toString()}
@@ -432,7 +458,10 @@ const NewRequestModal = ({
                             type="number"
                         />
                       </FormField>
-                      <FormField label="Tile Overlap (px)">
+                      <FormField
+                        label="Tile Overlap (px)"
+                        description="Minimum overlap between adjacent tiles in pixels. Overlap helps ensure features near tile boundaries are detected correctly."
+                      >
                         <Input
                             onChange={({detail}) => setTileOverlapValue(parseInt(detail.value))}
                             value={tileOverlapValue.toString()}
@@ -440,7 +469,10 @@ const NewRequestModal = ({
                             type="number"
                         />
                       </FormField>
-                      <FormField label="Tile Format">
+                      <FormField
+                        label="Tile Format"
+                        description="Image format for tiles sent to the model. Options: GTIFF (GeoTIFF), NITF (National Imagery Transmission Format), PNG, or JPEG."
+                      >
                         <Autosuggest
                             onChange={({ detail }) => setFormatValue(detail.value)}
                             value={formatValue}
@@ -456,7 +488,10 @@ const NewRequestModal = ({
                             empty=""
                         />
                       </FormField>
-                      <FormField label="Tile Compression">
+                      <FormField
+                        label="Tile Compression"
+                        description="Compression method for tiles. For NITF: J2K, JPEG, or NONE. For GeoTIFF: LZW, JPEG, or NONE. Choose based on format and size requirements."
+                      >
                         <Autosuggest
                             onChange={({ detail }) =>
                                 setCompressionValue(detail.value)
@@ -476,7 +511,10 @@ const NewRequestModal = ({
                       </FormField>
                     </ExpandableSection>
                     <ExpandableSection headerText="Feature Distillation Options">
-                      <FormField label="Feature Distillation Algorithm">
+                      <FormField
+                        label="Feature Distillation Algorithm"
+                        description="Algorithm to handle overlapping features at tile boundaries: NONE (no processing), NMS (Non-Maximal Suppression removes duplicates), or SOFT_NMS (decays scores of duplicates)."
+                      >
                         <Autosuggest
                             onChange={({detail}) => {
                               setFeatureDistillationAlgorithm(detail.value);
@@ -506,7 +544,10 @@ const NewRequestModal = ({
                             empty=""
                         />
                       </FormField>
-                      <FormField label="Feature Distillation IOU Threshold">
+                      <FormField
+                        label="Feature Distillation IOU Threshold"
+                        description="Intersection over Union (IOU) threshold for NMS and SOFT_NMS algorithms. Features with IOU above this threshold are considered duplicates."
+                      >
                         <Input
                             onChange={({detail}) => setFeatureDistillationIouThreshold(parseFloat(detail.value))}
                             value={featureDistillationIouThreshold.toString()}
@@ -515,7 +556,10 @@ const NewRequestModal = ({
                             type="number"
                         />
                       </FormField>
-                      <FormField label="Feature Distillation Skip Box Threshold">
+                      <FormField
+                        label="Feature Distillation Skip Box Threshold"
+                        description="Score threshold for SOFT_NMS. Features with scores below this threshold are skipped during processing."
+                      >
                         <Input
                             onChange={({detail}) => setFeatureDistillationSkipBoxThreshold(parseFloat(detail.value))}
                             value={featureDistillationSkipBoxThreshold.toString()}
@@ -524,7 +568,10 @@ const NewRequestModal = ({
                             type="number"
                         />
                       </FormField>
-                      <FormField label="Feature Distillation Sigma">
+                      <FormField
+                        label="Feature Distillation Sigma"
+                        description="Sigma parameter for SOFT_NMS Gaussian decay function. Controls how quickly duplicate feature scores decay."
+                      >
                         <Input
                             onChange={({detail}) => setFeatureDistillationSigma(parseFloat(detail.value))}
                             value={featureDistillationSigma.toString()}
@@ -535,19 +582,38 @@ const NewRequestModal = ({
                       </FormField>
                     </ExpandableSection>
                     <ExpandableSection headerText="Additional Options">
-                      <FormField label="Region of Interest (WKT)">
+                      <FormField
+                        label="Region of Interest (WKT)"
+                        description="Well-Known Text (WKT) geometry defining the region to process. Leave empty to process the entire image. Example: POLYGON((lon1 lat1, lon2 lat2, ...))"
+                      >
                         <Input
                             onChange={({detail}) => setRoiWkt(detail.value)}
                             value={roiWkt}
                         />
                       </FormField>
-                      <FormField label="Feature Properties (JSON)">
+                      <FormField
+                        label="Feature Properties (JSON)"
+                        description="Additional properties to add to all detected features, provided as a JSON array of objects. These properties will be merged with model output."
+                      >
                         <Input
                             onChange={({detail}) => setFeatureProperties(detail.value)}
                             value={featureProperties}
                         />
                       </FormField>
-                      <FormField label="Results Color">
+                      <FormField
+                        label="Text Prompt"
+                        description="Enter a text prompt describing what objects to detect (e.g., 'cars', 'buildings', 'vehicles'). Used by SAM3 and other text-prompted models."
+                      >
+                        <Input
+                            onChange={({detail}) => setTextPrompt(detail.value)}
+                            value={textPrompt}
+                            placeholder="e.g., cars, buildings, vehicles"
+                        />
+                      </FormField>
+                      <FormField
+                        label="Results Color"
+                        description="Color used to display detected features on the Cesium globe."
+                      >
                         <Select
                             selectedOption={resultsColor}
                             onChange={({ detail }) =>
