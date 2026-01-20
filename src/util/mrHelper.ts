@@ -1,4 +1,4 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import {
   GetQueueUrlCommand,
@@ -25,6 +25,7 @@ export interface ImageRequest {
   imageUrls: string[];
   outputs: any[];
   imageProcessor: any;
+  imageProcessorParameters?: any;
   postProcessing: any[];
   imageProcessorTileSize?: number;
   imageProcessorTileOverlap?: number;
@@ -58,6 +59,7 @@ export async function runModelOnImage(
   featureDistillationSigma: number,
   roiWkt: string,
   featureProperties: string,
+  textPrompt: string,
   imageRequestStatus: any,
   setImageRequestStatus: any,
   setShowCredsExpiredAlert: any
@@ -80,7 +82,8 @@ export async function runModelOnImage(
     featureDistillationSkipBoxThreshold,
     featureDistillationSigma,
     roiWkt,
-    featureProperties
+    featureProperties,
+    textPrompt
   );
   await queueImageProcessingJob(
     imageProcessingRequest,
@@ -274,7 +277,8 @@ async function buildImageProcessingRequest(
   featureDistillationSkipBoxThreshold: number,
   featureDistillationSigma: number,
   roiWkt: string,
-  featureProperties: string
+  featureProperties: string,
+  textPrompt: string
 ): Promise<ImageRequest> {
   const jobName: string = `test_${jobId}`;
   const accountId = await getAccountId();
@@ -318,6 +322,16 @@ async function buildImageProcessingRequest(
     imageProcessorTileCompression: compressionValue,
     postProcessing: []
   };
+
+  // Add text prompt as CustomAttributes if provided (for SAM3 model)
+  if (textPrompt && textPrompt.trim().length > 0) {
+    // URL encode the text prompt to handle spaces and special characters
+    const encodedPrompt = encodeURIComponent(textPrompt.trim());
+    imageRequest.imageProcessorParameters = {
+      CustomAttributes: `text_prompt=${encodedPrompt}`
+    };
+  }
+
   if (featureDistillationAlgorithm != "NONE") {
     imageRequest.postProcessing.push({
       step: "FEATURE_DISTILLATION",

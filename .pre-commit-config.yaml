@@ -24,6 +24,7 @@ repos:
             ^\..+|
             .+\.md|
             electron/.*|
+            patches/.*|
             src/data/.*|
             src/vite-env.d.ts|
             index.html|
@@ -41,6 +42,7 @@ repos:
             ^\..+|
             .+\.md|
             electron/.*|
+            patches/.*|
             src/data/.*|
             src/vite-env.d.ts|
             index.html|

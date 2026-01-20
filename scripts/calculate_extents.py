@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2025 Amazon.com, Inc. or its affiliates.
+# Copyright 2025-2026 Amazon.com, Inc. or its affiliates.
 
 """
 Calculate geographic extents of a raster dataset using GDAL.
@@ -63,74 +63,123 @@ def get_extents(dataset_path: str) -> dict:
         # Get geotransform
         geotransform = ds.GetGeoTransform()
 
-        # Calculate corner coordinates in the source coordinate system
-        # Using the geotransform: [x_origin, pixel_width, rotation, y_origin, rotation, pixel_height]
-        x_origin = geotransform[0]
-        pixel_width = geotransform[1]
-        y_origin = geotransform[3]
-        pixel_height = geotransform[5]
+        # Check if geotransform is valid (not default/empty)
+        # Default geotransform is (0.0, 1.0, 0.0, 0.0, 0.0, 1.0) which indicates pixel coordinates
+        is_default_geotransform = (
+            geotransform[0] == 0.0 and geotransform[1] == 1.0 and
+            geotransform[2] == 0.0 and geotransform[3] == 0.0 and
+            geotransform[4] == 0.0 and geotransform[5] == 1.0
+        )
 
-        # Calculate the four corners in source coordinates
-        x_min = x_origin
-        x_max = x_origin + x_size * pixel_width
-        y_min = y_origin + y_size * pixel_height  # Note: pixel_height is usually negative
-        y_max = y_origin
+        # Get GCPs if available
+        gcps = ds.GetGCPs()
+        gcp_projection = ds.GetGCPProjection()
 
-        # Ensure we have the correct min/max values
-        if y_min > y_max:
-            y_min, y_max = y_max, y_min
-        if x_min > x_max:
-            x_min, x_max = x_max, x_min
+        # Use GCPs if geotransform is default and GCPs are available
+        if is_default_geotransform and gcps and len(gcps) > 0:
+            # Use GCPs to calculate extents
+            if gcp_projection:
+                gcp_srs = osr.SpatialReference()
+                gcp_srs.ImportFromWkt(gcp_projection)
+            else:
+                # If no GCP projection, assume WGS84
+                gcp_srs = osr.SpatialReference()
+                gcp_srs.ImportFromEPSG(4326)
 
-        # Transform the four corners to WGS84
-        corners = [
-            (x_min, y_max),  # Top-left
-            (x_max, y_max),  # Top-right
-            (x_max, y_min),  # Bottom-right
-            (x_min, y_min)   # Bottom-left
-        ]
+            # Create transformation from GCP CRS to WGS84
+            gcp_transform = osr.CoordinateTransformation(gcp_srs, tgt_srs)
 
-        # Transform all corners to WGS84
-        geo_corners = []
-        for i, (x, y) in enumerate(corners):
-            if is_geographic:
-                # For geographic CRS, we need to check if the order is lat/lon or lon/lat
-                # Most modern geographic CRS use lon/lat order, but some older ones use lat/lon
-                # We'll try the standard lon/lat order first
+            # Extract geographic coordinates from GCPs
+            geo_corners = []
+            for gcp in gcps:
+                x, y = gcp.GCPX, gcp.GCPY
                 try:
-                    # Try standard lon/lat order
-                    lon, lat, _ = transform.TransformPoint(x, y)
-                    # Check if the result makes sense (lat should be between -90 and 90)
+                    # Transform GCP coordinates to WGS84
+                    lon, lat, _ = gcp_transform.TransformPoint(x, y)
+                    # Check if result makes sense
                     if -90 <= lat <= 90 and -180 <= lon <= 180:
                         geo_corners.append((lon, lat))
                     else:
-                        # If not, try lat/lon order
-                        lat, lon, _ = transform.TransformPoint(y, x)
+                        # Try swapping coordinates if result doesn't make sense
+                        lat, lon, _ = gcp_transform.TransformPoint(y, x)
                         geo_corners.append((lon, lat))
                 except:
-                    # If transformation fails, try lat/lon order
-                    try:
-                        lat, lon, _ = transform.TransformPoint(y, x)
-                        geo_corners.append((lon, lat))
-                    except:
-                        # Last resort: use the original order
-                        lon, lat, _ = transform.TransformPoint(x, y)
-                        geo_corners.append((lon, lat))
-            else:
-                # For projected CRS, X is typically easting, Y is northing
-                # TransformPoint should handle the conversion correctly
-                try:
-                    lat, lon, _ = transform.TransformPoint(x, y)
-                    geo_corners.append((lon, lat))
-                except Exception as e:
                     # If transformation fails, try swapping coordinates
                     try:
-                        lon, lat, _ = transform.TransformPoint(y, x)
+                        lat, lon, _ = gcp_transform.TransformPoint(y, x)
                         geo_corners.append((lon, lat))
                     except:
-                        # Last resort: use the original order
+                        # Last resort: use coordinates as-is (assuming they're already WGS84)
+                        geo_corners.append((x, y))
+        else:
+            # Use geotransform to calculate corner coordinates
+            # Using the geotransform: [x_origin, pixel_width, rotation, y_origin, rotation, pixel_height]
+            x_origin = geotransform[0]
+            pixel_width = geotransform[1]
+            y_origin = geotransform[3]
+            pixel_height = geotransform[5]
+
+            # Calculate the four corners in source coordinates
+            x_min = x_origin
+            x_max = x_origin + x_size * pixel_width
+            y_min = y_origin + y_size * pixel_height  # Note: pixel_height is usually negative
+            y_max = y_origin
+
+            # Ensure we have the correct min/max values
+            if y_min > y_max:
+                y_min, y_max = y_max, y_min
+            if x_min > x_max:
+                x_min, x_max = x_max, x_min
+
+            # Transform the four corners to WGS84
+            corners = [
+                (x_min, y_max),  # Top-left
+                (x_max, y_max),  # Top-right
+                (x_max, y_min),  # Bottom-right
+                (x_min, y_min)   # Bottom-left
+            ]
+
+            # Transform all corners to WGS84
+            geo_corners = []
+            for i, (x, y) in enumerate(corners):
+                if is_geographic:
+                    # For geographic CRS, we need to check if the order is lat/lon or lon/lat
+                    # Most modern geographic CRS use lon/lat order, but some older ones use lat/lon
+                    # We'll try the standard lon/lat order first
+                    try:
+                        # Try standard lon/lat order
+                        lon, lat, _ = transform.TransformPoint(x, y)
+                        # Check if the result makes sense (lat should be between -90 and 90)
+                        if -90 <= lat <= 90 and -180 <= lon <= 180:
+                            geo_corners.append((lon, lat))
+                        else:
+                            # If not, try lat/lon order
+                            lat, lon, _ = transform.TransformPoint(y, x)
+                            geo_corners.append((lon, lat))
+                    except:
+                        # If transformation fails, try lat/lon order
+                        try:
+                            lat, lon, _ = transform.TransformPoint(y, x)
+                            geo_corners.append((lon, lat))
+                        except:
+                            # Last resort: use the original order
+                            lon, lat, _ = transform.TransformPoint(x, y)
+                            geo_corners.append((lon, lat))
+                else:
+                    # For projected CRS, X is typically easting, Y is northing
+                    # TransformPoint should handle the conversion correctly
+                    try:
                         lon, lat, _ = transform.TransformPoint(x, y)
                         geo_corners.append((lon, lat))
+                    except Exception as e:
+                        # If transformation fails, try swapping coordinates
+                        try:
+                            lon, lat, _ = transform.TransformPoint(y, x)
+                            geo_corners.append((lon, lat))
+                        except:
+                            # Last resort: use the original order
+                            lon, lat, _ = transform.TransformPoint(x, y)
+                            geo_corners.append((lon, lat))
 
         # Extract longitudes and latitudes
         lons = [coord[0] for coord in geo_corners]
