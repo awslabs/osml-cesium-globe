@@ -1,4 +1,4 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import { join } from "node:path";
 
@@ -26,8 +26,30 @@ export const S3_RESULTS_BUCKET_PREFIX: string = "mr-bucket-sink";
 // stream name prefixes
 export const KINESIS_RESULTS_STREAM_PREFIX: string = "mr-stream-sink";
 
-// deployment info
-export const REGION: string = "us-west-2";
+// deployment info — resolved from standard AWS sources, falls back to us-west-2
+function resolveRegion(): string {
+  // 1. Environment variables (same precedence the AWS SDK uses)
+  if (process.env.AWS_REGION) return process.env.AWS_REGION;
+  if (process.env.AWS_DEFAULT_REGION) return process.env.AWS_DEFAULT_REGION;
+
+  // 2. ~/.aws/config [default] profile
+  try {
+    const configPath = join(homedir(), ".aws", "config");
+    const configContents = readFileSync(configPath, "utf-8");
+    const parser = new ConfigIniParser();
+    parser.parse(configContents);
+    const region = parser.get("default", "region", undefined) as
+      | string
+      | undefined;
+    if (region) return region.trim();
+  } catch {
+    // Config file missing or unreadable — fall through to default
+  }
+
+  return "us-west-2";
+}
+
+export const REGION: string = resolveRegion();
 
 // grab the aws credentials
 interface Credentials {
