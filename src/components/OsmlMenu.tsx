@@ -23,11 +23,13 @@ interface OsmlMenuProps {
     data: Record<string, any>;
   };
   setImageRequestStatus: (status: { state: string; data: Record<string, any> }) => void;
+  onFeatureClick?: (data: import("@/components/FeaturePopup").FeaturePopupData | null) => void;
 }
 
 const OsmlMenu: React.FC<OsmlMenuProps> = ({
   imageRequestStatus,
-  setImageRequestStatus
+  setImageRequestStatus,
+  onFeatureClick
 }) => {
   const cesium = useContext(CesiumContext);
   const { resources, removeResource, toggleVisibility, zoomTo, clearAll } = useResources();
@@ -304,6 +306,7 @@ const OsmlMenu: React.FC<OsmlMenuProps> = ({
         setShowLoadDataModal={setShowLoadDataModal}
         showCredsExpiredAlert={showCredsExpiredAlert}
         setShowCredsExpiredAlert={setShowCredsExpiredAlert}
+        onFeatureClick={onFeatureClick}
       />
       <LoadImageModal
         showLoadImageModal={showLoadImageModal}
@@ -318,6 +321,7 @@ const OsmlMenu: React.FC<OsmlMenuProps> = ({
         setImageRequestStatus={setImageRequestStatus}
         showCredsExpiredAlert={showCredsExpiredAlert}
         setShowCredsExpiredAlert={setShowCredsExpiredAlert}
+        onFeatureClick={onFeatureClick}
       />
     </>
   );

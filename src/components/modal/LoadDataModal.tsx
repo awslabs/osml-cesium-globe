@@ -7,7 +7,7 @@ import * as uuid from "uuid";
 
 import { DEFAULT_RESULTS_COLOR_OPTION, LOCAL_GEOJSON_FOLDER } from "@/config";
 import { useResources } from "@/context/ResourceContext";
-import { loadGeoJson, loadS3GeoJson } from "@/util/cesiumHelper";
+import { loadGeoJson, loadS3GeoJson, type FeaturePopupCallback } from "@/util/cesiumHelper";
 import { getListOfS3Buckets, getListOfS3Objects } from "@/util/s3Helper";
 
 import {
@@ -21,12 +21,14 @@ const LoadDataModal = ({
   showLoadDataModal,
   setShowLoadDataModal,
   showCredsExpiredAlert,
-  setShowCredsExpiredAlert
+  setShowCredsExpiredAlert,
+  onFeatureClick
 }: {
   showLoadDataModal: any;
   setShowLoadDataModal: any;
   showCredsExpiredAlert: any;
   setShowCredsExpiredAlert: any;
+  onFeatureClick?: FeaturePopupCallback;
 }) => {
   const cesium = useContext(CesiumContext);
   const { addResource } = useResources();
@@ -97,7 +99,8 @@ const LoadDataModal = ({
           s3Bucket,
           s3Object,
           DEFAULT_RESULTS_COLOR_OPTION.value,
-          setShowCredsExpiredAlert
+          setShowCredsExpiredAlert,
+          onFeatureClick
         ).then((result) => {
           console.log(`Successfully loaded ${s3Object}!`);
           addResource({
@@ -123,7 +126,8 @@ const LoadDataModal = ({
           cesium.viewer,
           features,
           jobId,
-          DEFAULT_RESULTS_COLOR_OPTION.value
+          DEFAULT_RESULTS_COLOR_OPTION.value,
+          onFeatureClick
         ).then((result) => {
           console.log(`Successfully loaded ${localFile}!`);
           addResource({

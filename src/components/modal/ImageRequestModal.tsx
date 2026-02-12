@@ -24,7 +24,7 @@ import {
   LoadedResource,
   useResources
 } from "@/context/ResourceContext";
-import { loadImageInCesium, loadS3GeoJson } from "@/util/cesiumHelper";
+import { loadImageInCesium, loadS3GeoJson, type FeaturePopupCallback } from "@/util/cesiumHelper";
 import { runModelOnImage } from "@/util/mrHelper";
 import { getListOfS3Buckets, getListOfS3Objects } from "@/util/s3Helper";
 import { getListOfSMEndpoints } from "@/util/smHelper";
@@ -51,7 +51,8 @@ async function loadResults(
   resultsColor: string,
   setShowCredsExpiredAlert: any,
   setImageRequestStatus: any,
-  addResource?: (resource: LoadedResource) => void
+  addResource?: (resource: LoadedResource) => void,
+  onFeatureClick?: FeaturePopupCallback
 ) {
   let totalFeatures = 0;
   for (const output of outputs) {
@@ -62,7 +63,8 @@ async function loadResults(
         output.bucket,
         s3Object,
         resultsColor,
-        setShowCredsExpiredAlert
+        setShowCredsExpiredAlert,
+        onFeatureClick
       );
       totalFeatures += result.featureCount;
       if (addResource) {
@@ -133,7 +135,8 @@ const NewRequestModal = ({
   imageRequestStatus,
   setImageRequestStatus,
   showCredsExpiredAlert,
-  setShowCredsExpiredAlert
+  setShowCredsExpiredAlert,
+  onFeatureClick
 }: {
   showImageRequestModal: any;
   setShowImageRequestModal: any;
@@ -141,6 +144,7 @@ const NewRequestModal = ({
   setImageRequestStatus: any;
   showCredsExpiredAlert: any;
   setShowCredsExpiredAlert: any;
+  onFeatureClick?: FeaturePopupCallback;
 }) => {
   const cesium = useContext(CesiumContext);
   const { addResource } = useResources();
@@ -228,7 +232,8 @@ const NewRequestModal = ({
       if (!imageRequestStatus.data.featureCount) {
         await loadResults(
           cesium, outputs, jobName, jobId,
-          resultsColor.value, setShowCredsExpiredAlert, setImageRequestStatus, addResource
+          resultsColor.value, setShowCredsExpiredAlert, setImageRequestStatus, addResource,
+          onFeatureClick
         );
       }
     };

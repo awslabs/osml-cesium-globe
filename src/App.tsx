@@ -9,6 +9,7 @@ import * as Cesium from "cesium";
 import OsmlTray from "@/components/OsmlTray";
 import StatusDisplay from "@/components/StatusDisplay";
 import Logo from "@/components/Logo";
+import FeaturePopup, { type FeaturePopupData } from "@/components/FeaturePopup";
 import { ResourceProvider } from "@/context/ResourceContext";
 
 /** Natural Earth II fallback (offline, bundled with Cesium) */
@@ -39,6 +40,12 @@ const App = () => {
   });
 
   const [baseLayer, setBaseLayer] = useState<Cesium.ImageryLayer | null>(null);
+  const [featurePopupData, setFeaturePopupData] = useState<FeaturePopupData | null>(null);
+
+  // Callback for feature clicks -- called from cesiumHelper
+  const handleFeaturePopup = useCallback((data: FeaturePopupData | null) => {
+    setFeaturePopupData(data);
+  }, []);
 
   // Resolve the base layer once before rendering the Viewer
   useEffect(() => {
@@ -92,11 +99,18 @@ const App = () => {
         <OsmlTray
           imageRequestStatus={imageRequestStatus}
           setImageRequestStatus={setImageRequestStatus}
+          onFeatureClick={handleFeaturePopup}
         />
         <StatusDisplay
           imageRequestStatus={imageRequestStatus}
           setImageRequestStatus={setImageRequestStatus}
         />
+        {featurePopupData && (
+          <FeaturePopup
+            data={featurePopupData}
+            onClose={() => setFeaturePopupData(null)}
+          />
+        )}
       </ResourceProvider>
     </ResiumViewer>
   );
