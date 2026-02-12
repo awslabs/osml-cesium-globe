@@ -1,7 +1,25 @@
-/* Copyright 2023-2025 Amazon.com, Inc. or its affiliates. */
+/* Copyright 2023-2026 Amazon.com, Inc. or its affiliates. */
 
 .cesium-viewer .cesium-widget-credits {
     display: none;
+}
+
+/* ==============================
+   Viewport Vignette
+   Subtle dark gradient around edges
+   for a cinematic framing effect.
+   ============================== */
+.cesium-viewer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(
+        ellipse at center,
+        transparent 55%,
+        rgba(0, 0, 0, 0.25) 100%
+    );
 }
 
 .osml-tray {
@@ -14,102 +32,7 @@
 .status-display {
     position: absolute;
     bottom: 20px;
-    right: 0px;
+    right: 20px;
     z-index: 1000;
-    max-width: 400px;
-    background: transparent !important;
-    border: none !important;
-}
-
-.status-display > div {
-    background: transparent !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-}
-
-.status-display > div > div {
-    background: transparent !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-}
-
-.status-display .awsui-container {
-    padding: 0;
-    width: 100%;
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Make the alert fill the container */
-.status-display [class*="awsui-alert"] {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-    border: none !important;
-}
-
-.status-display [class*="awsui-alert"] > * {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-    border: none !important;
-}
-
-.status-display [class*="awsui-alert"] > * > * {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Target specific Alert elements */
-.status-display [class*="awsui-alert-header"],
-.status-display [class*="awsui-alert-content"],
-.status-display [class*="awsui-alert-body"],
-.status-display [class*="awsui-alert-message"],
-.status-display [class*="awsui-alert-type"],
-.status-display [class*="awsui-alert-dismiss"],
-.status-display [class*="awsui-alert-icon"],
-.status-display [class*="awsui-alert-text"],
-.status-display [class*="awsui-alert-wrapper"] {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Ensure the alert container itself has no padding and fills space */
-.status-display > div {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Remove padding from the flex container in the alert */
-.status-display div[style*="display: flex"] {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Only apply background to the actual content area */
-.status-display [class*="awsui-alert-content"] {
-    background: var(--color-background-container-content) !important;
-    border: none !important;
+    max-width: 380px;
 }

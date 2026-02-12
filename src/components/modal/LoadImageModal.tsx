@@ -1,21 +1,27 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
-import { Autosuggest } from "@cloudscape-design/components";
-import Box from "@cloudscape-design/components/box";
-import Button from "@cloudscape-design/components/button";
-import Modal from "@cloudscape-design/components/modal";
-import SpaceBetween from "@cloudscape-design/components/space-between";
-import Spinner from "@cloudscape-design/components/spinner";
-import Tabs from "@cloudscape-design/components/tabs";
-import { useContext, useState } from "react";
-import { CesiumContext } from "resium";
 import fs from "fs";
+import { useContext, useEffect, useState } from "react";
+import { CesiumContext } from "resium";
+import * as uuid from "uuid";
 
 import { LOCAL_IMAGE_DATA_FOLDER } from "@/config";
+import { useResources } from "@/context/ResourceContext";
 import { convertImageToCesium, loadImageInCesium } from "@/util/cesiumHelper";
+import { getListOfS3Buckets, getListOfS3Objects } from "@/util/s3Helper";
 
-import CredsExpiredAlert from "../alert/CredsExpiredAlert";
-import S3ImageSelector from "../S3ImageSelector";
+import {
+  DarkAutosuggest,
+  DarkFormField,
+  type LoadingStatus
+} from "../ui/FormControls";
+import DarkModal from "./DarkModal";
+
+function isImageFile(filename: string): boolean {
+  const imageExtensions = [".tif", ".tiff", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".ntf"];
+  const ext = filename.toLowerCase().substring(filename.lastIndexOf("."));
+  return imageExtensions.includes(ext);
+}
 
 const LoadImageModal = ({
   showLoadImageModal,
@@ -29,33 +35,72 @@ const LoadImageModal = ({
   setShowCredsExpiredAlert: (show: boolean) => void;
 }) => {
   const cesium = useContext(CesiumContext);
+  const { addResource } = useResources();
+
+  const [activeTab, setActiveTab] = useState<"local" | "s3">("local");
   const [localFile, setLocalFile] = useState("");
   const [s3Bucket, setS3Bucket] = useState("");
   const [s3Object, setS3Object] = useState("");
-  const [activeTabId, setActiveTabId] = useState("local");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get list of image files from the local images directory
+  // S3 loading state
+  const [bucketStatus, setBucketStatus] = useState<LoadingStatus>("pending");
+  const [imageStatus, setImageStatus] = useState<LoadingStatus>("pending");
+  const [s3Buckets, setS3Buckets] = useState<{ value: string }[]>([]);
+  const [s3Objects, setS3Objects] = useState<{ value: string }[]>([]);
+
+  // Local file list
   const fileList = fs
     .readdirSync(LOCAL_IMAGE_DATA_FOLDER)
     .filter((file) => {
       const stat = fs.lstatSync(LOCAL_IMAGE_DATA_FOLDER + file);
       return stat.isFile() && isImageFile(file);
     });
-
   const localFileList = fileList.map((file) => ({ value: file }));
 
-  // Check if file is an image based on extension
-  function isImageFile(filename: string): boolean {
-    const imageExtensions = ['.tif', '.tiff', '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.ntf'];
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return imageExtensions.includes(ext);
-  }
+  // Load S3 buckets
+  useEffect(() => {
+    if (!showLoadImageModal) return;
+    (async () => {
+      setBucketStatus("loading");
+      const res: any = await getListOfS3Buckets(setShowCredsExpiredAlert);
+      if (res !== undefined) {
+        setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
+        setBucketStatus("finished");
+      } else {
+        setBucketStatus("error");
+      }
+    })();
+  }, [showLoadImageModal, showCredsExpiredAlert]);
+
+  const loadS3Objects = async (bucket: string) => {
+    setImageStatus("loading");
+    const res: any = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
+    if (res !== undefined) {
+      const imageFiles = res
+        .map((o: any) => o["Key"])
+        .filter((k: string) => isImageFile(k))
+        .map((k: string) => ({ value: k }));
+      setS3Objects(imageFiles);
+      setImageStatus("finished");
+    } else {
+      setImageStatus("error");
+    }
+  };
+
+  const handleDismiss = () => {
+    if (!isLoading) {
+      setShowLoadImageModal(false);
+      setLocalFile("");
+      setS3Bucket("");
+      setS3Object("");
+    }
+  };
 
   const loadImage = () => {
-    if (isLoading) return; // Prevent multiple clicks
+    if (isLoading) return;
 
-    if (activeTabId === "local" && localFile && cesium?.viewer) {
+    if (activeTab === "local" && localFile && cesium?.viewer) {
       setIsLoading(true);
       const imageId = localFile.split(".")[0];
       void convertImageToCesium(
@@ -63,16 +108,30 @@ const LoadImageModal = ({
         localFile,
         imageId,
         setShowCredsExpiredAlert
-      ).then(() => {
-        console.log(`Successfully loaded local image: ${localFile}!`);
-        setShowLoadImageModal(false);
-        setLocalFile("");
-        setIsLoading(false);
-      }).catch((error) => {
-        console.error("Error loading local image:", error);
-        setIsLoading(false);
-      });
-    } else if (activeTabId === "s3" && s3Bucket && s3Object && cesium?.viewer) {
+      )
+        .then((imageryLayer) => {
+          console.log(`Successfully loaded local image: ${localFile}!`);
+          if (imageryLayer) {
+            addResource({
+              id: uuid.v4(),
+              name: imageId,
+              type: "imagery",
+              source: "local",
+              sourceDetail: localFile,
+              visible: true,
+              loadedAt: new Date(),
+              imageryLayer: imageryLayer
+            });
+          }
+          setShowLoadImageModal(false);
+          setLocalFile("");
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error loading local image:", error);
+          setIsLoading(false);
+        });
+    } else if (activeTab === "s3" && s3Bucket && s3Object && cesium?.viewer) {
       setIsLoading(true);
       const imageId = s3Object.split("/").pop()?.split(".")[0] || "s3-image";
       void loadImageInCesium(
@@ -81,122 +140,125 @@ const LoadImageModal = ({
         s3Object,
         imageId,
         setShowCredsExpiredAlert
-      ).then(() => {
-        console.log(`Successfully loaded S3 image: ${s3Object}!`);
-        setShowLoadImageModal(false);
-        setS3Bucket("");
-        setS3Object("");
-        setIsLoading(false);
-      }).catch((error) => {
-        console.error("Error loading S3 image:", error);
-        setIsLoading(false);
-      });
+      )
+        .then((imageryLayer) => {
+          console.log(`Successfully loaded S3 image: ${s3Object}!`);
+          if (imageryLayer) {
+            addResource({
+              id: uuid.v4(),
+              name: imageId,
+              type: "imagery",
+              source: "s3",
+              sourceDetail: `${s3Bucket}/${s3Object}`,
+              visible: true,
+              loadedAt: new Date(),
+              imageryLayer: imageryLayer
+            });
+          }
+          setShowLoadImageModal(false);
+          setS3Bucket("");
+          setS3Object("");
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error loading S3 image:", error);
+          setIsLoading(false);
+        });
     }
   };
 
+  const canSubmit =
+    !isLoading &&
+    ((activeTab === "local" && !!localFile) ||
+      (activeTab === "s3" && !!s3Bucket && !!s3Object));
+
   return (
-    <Modal
-      onDismiss={() => {
-        if (!isLoading) {
-          setShowLoadImageModal(false);
-          setLocalFile("");
-          setS3Bucket("");
-          setS3Object("");
-        }
-      }}
+    <DarkModal
       visible={showLoadImageModal}
-      closeAriaLabel="Close modal"
-      footer={
-        <Box float="right">
-          <SpaceBetween direction="horizontal" size="xs">
-            <Button
-              onClick={() => {
-                if (!isLoading) {
-                  setShowLoadImageModal(false);
-                  setLocalFile("");
-                  setS3Bucket("");
-                  setS3Object("");
-                }
-              }}
-              variant="link"
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={loadImage}
-              variant="primary"
-              disabled={
-                isLoading ||
-                (activeTabId === "local" && !localFile) ||
-                (activeTabId === "s3" && (!s3Bucket || !s3Object))
-              }
-            >
-              {isLoading ? (
-                <SpaceBetween direction="horizontal" size="xs">
-                  <Spinner size="normal" />
-                  <span>Loading...</span>
-                </SpaceBetween>
-              ) : (
-                "Load Image"
-              )}
-            </Button>
-          </SpaceBetween>
-        </Box>
+      onDismiss={handleDismiss}
+      title="Load Image"
+      subtitle="Import imagery from local files or S3 buckets"
+      size="md"
+      icon={
+        <div style={{ background: "rgba(96, 165, 250, 0.15)", borderRadius: 10, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <rect x="2" y="3" width="16" height="14" rx="2" stroke="rgb(96, 165, 250)" strokeWidth="1.5" />
+            <path d="M2 14l5-5 3 3 3-4 5 6" stroke="rgb(96, 165, 250)" strokeWidth="1.3" strokeLinejoin="round" />
+            <circle cx="13" cy="7.5" r="1.5" fill="rgb(96, 165, 250)" fillOpacity="0.5" />
+          </svg>
+        </div>
       }
-      header="Load Image"
+      footer={
+        <>
+          <button className="dm-btn dm-btn--ghost" onClick={handleDismiss} disabled={isLoading}>Cancel</button>
+          <button className="dm-btn dm-btn--primary" onClick={loadImage} disabled={!canSubmit}>
+            {isLoading ? (<><span className="dm-spinner" /> Loading...</>) : "Load Image"}
+          </button>
+        </>
+      }
     >
-      {showCredsExpiredAlert && (
-        <CredsExpiredAlert
-          setShowCredsExpiredAlert={setShowCredsExpiredAlert}
-        />
+      <div className="dm-tabs">
+        <button className={`dm-tab ${activeTab === "local" ? "dm-tab--active" : ""}`} onClick={() => setActiveTab("local")}>From Local</button>
+        <button className={`dm-tab ${activeTab === "s3" ? "dm-tab--active" : ""}`} onClick={() => setActiveTab("s3")}>From S3</button>
+      </div>
+
+      {activeTab === "local" && (
+        <>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "0 0 14px", lineHeight: 1.5 }}>
+            Select an image file from the local images directory to load into the globe.
+          </p>
+          <div className="dm-field">
+            <DarkFormField label="Image File">
+              <DarkAutosuggest
+                value={localFile}
+                onChange={setLocalFile}
+                options={localFileList}
+                placeholder="Select an image file"
+                empty="No image files found"
+              />
+            </DarkFormField>
+          </div>
+        </>
       )}
 
-      <Tabs
-        onChange={({ detail }) => setActiveTabId(detail.activeTabId)}
-        activeTabId={activeTabId}
-        tabs={[
-          {
-            label: "From Local",
-            id: "local",
-            content: (
-              <SpaceBetween direction="vertical" size="l">
-                <Box variant="p">
-                  Select an image file from the local images directory to load into Cesium.
-                </Box>
-                <Autosuggest
-                  onChange={({ detail }) => {
-                    if (detail.value) {
-                      setLocalFile(detail.value);
-                    }
-                  }}
-                  value={localFile}
-                  options={localFileList}
-                  enteredTextLabel={(value) => `Use: "${value}"`}
-                  ariaLabel="Image File Selection"
-                  placeholder="Select an image file"
-                  empty="No image files found"
-                />
-              </SpaceBetween>
-            )
-          },
-          {
-            label: "From S3",
-            id: "s3",
-            content: (
-              <S3ImageSelector
-                s3Object={s3Object}
-                setS3Object={setS3Object}
-                s3Bucket={s3Bucket}
-                setS3Bucket={setS3Bucket}
-                setShowCredsExpiredAlert={setShowCredsExpiredAlert}
-                showCredsExpiredAlert={showCredsExpiredAlert}
+      {activeTab === "s3" && (
+        <>
+          <div className="dm-field">
+            <DarkFormField label="Bucket" description="S3 bucket containing image files.">
+              <DarkAutosuggest
+                value={s3Bucket}
+                onChange={(val) => {
+                  setS3Bucket(val);
+                  setS3Objects([]);
+                  setImageStatus("pending");
+                  if (val) loadS3Objects(val);
+                }}
+                options={s3Buckets}
+                placeholder="Select or type a bucket name"
+                status={bucketStatus}
+                loadingText="Loading buckets..."
+                errorText="Could not load buckets"
+                empty="No buckets found"
               />
-            )
-          }
-        ]}
-      />
-    </Modal>
+            </DarkFormField>
+          </div>
+          <div className="dm-field">
+            <DarkFormField label="Image" description="S3 object key for the image file.">
+              <DarkAutosuggest
+                value={s3Object}
+                onChange={setS3Object}
+                options={s3Objects}
+                placeholder="Select an image file"
+                status={imageStatus}
+                loadingText="Loading images..."
+                errorText="Could not load images"
+                empty="No image files found"
+              />
+            </DarkFormField>
+          </div>
+        </>
+      )}
+    </DarkModal>
   );
 };
 

@@ -1,15 +1,36 @@
-/* Copyright 2023-2025 Amazon.com, Inc. or its affiliates. */
+/* Copyright 2023-2026 Amazon.com, Inc. or its affiliates. */
 
 .logo-container {
   position: absolute;
   bottom: 25px;
-  right: 5px;
+  left: 5px;
   z-index: 1;
   padding: 10px;
+  animation: logo-entrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
+}
+
+@keyframes logo-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .logo-image {
-  height: 10vh;
+  height: clamp(40px, 6vh, 70px);
   width: auto;
   display: block;
+  opacity: 0.75;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+  transition: all 0.3s ease;
+}
+
+.logo-image:hover {
+  opacity: 1;
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.4));
+  transform: scale(1.04);
 }
