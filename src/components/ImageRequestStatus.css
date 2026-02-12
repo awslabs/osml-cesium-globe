@@ -1,0 +1,86 @@
+/* Copyright 2023-2026 Amazon.com, Inc. or its affiliates. */
+
+/* ==============================
+   Status Card
+   ============================== */
+.irs-card {
+  background: rgba(18, 22, 32, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  max-width: 360px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+
+  /* Transition in/out */
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.irs-card--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.irs-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.irs-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: irs-spin 1s linear infinite;
+}
+
+@keyframes irs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.irs-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.irs-title {
+  font-weight: 650;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.irs-message {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+.irs-dismiss {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.irs-dismiss:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+}

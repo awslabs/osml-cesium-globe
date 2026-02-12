@@ -1,7 +1,6 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import React from "react";
-import { Container } from "@cloudscape-design/components";
 
 import ImageRequestStatus from "@/components/ImageRequestStatus";
 
@@ -20,12 +19,10 @@ const StatusDisplay = ({ imageRequestStatus, setImageRequestStatus }: StatusDisp
 
   return (
     <div className="status-display">
-      <Container>
-        <ImageRequestStatus
-          imageRequestStatus={imageRequestStatus}
-          setImageRequestStatus={setImageRequestStatus}
-        />
-      </Container>
+      <ImageRequestStatus
+        imageRequestStatus={imageRequestStatus}
+        setImageRequestStatus={setImageRequestStatus}
+      />
     </div>
   );
 };

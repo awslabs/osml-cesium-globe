@@ -1,4 +1,4 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import { exec } from "node:child_process";
 
@@ -373,7 +373,7 @@ async function addImageLayerWithExtents(
   imageId: string,
   extents: CesiumRectDeg,
   setShowCredsExpiredAlert: (show: boolean) => void
-): Promise<void> {
+): Promise<ImageryLayer | undefined> {
   try {
     // Wait for viewer to be initialized
     let retryCount = 0;
@@ -413,7 +413,7 @@ async function addImageLayerWithExtents(
       credit: imageId.split(":")[0]
     });
 
-    layers.addImageryProvider(imageryProvider);
+    const imageryLayer = layers.addImageryProvider(imageryProvider);
     console.log("Finished loading imagery tiles into Cesium!");
 
     // Wait a moment for the imagery to load, then zoom to the image extent
@@ -424,6 +424,8 @@ async function addImageLayerWithExtents(
       });
       console.log("Zoomed to image extent!");
     }, 1000);
+
+    return imageryLayer;
   } catch (error) {
     const err = error as ImageRequestError;
     if (err.code === "ExpiredToken") {
@@ -432,6 +434,7 @@ async function addImageLayerWithExtents(
       console.error("Error adding image layer:", error);
       throw error;
     }
+    return undefined;
   }
 }
 
@@ -468,13 +471,13 @@ export async function convertImageToCesium(
   fileName: string,
   imageId: string,
   setShowCredsExpiredAlert: (show: boolean) => void
-): Promise<void> {
+): Promise<ImageryLayer | undefined> {
   fileName = fileName.replace(/^(\.\.(\/|\\|$))+/, "");
   const imageFolder = path.resolve(LOCAL_IMAGE_DATA_FOLDER);
   const tileFolder = path.resolve(CESIUM_IMAGERY_TILES_FOLDER);
 
   try {
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<ImageryLayer | undefined>((resolve, reject) => {
       exec("docker pull tumgis/ctb-quantized-mesh:alpine", async (err, output) => {
         if (err) {
           reject(new Error(`Failed to pull Docker image: ${err.message}`));
@@ -517,14 +520,17 @@ export async function convertImageToCesium(
 
                       try {
                         // Add the image layer with the calculated extents
-                        await addImageLayerWithExtents(
+                        const tileBaseUrl = typeof window !== "undefined"
+                          ? window.location.origin
+                          : "http://localhost:5173";
+                        const layer = await addImageLayerWithExtents(
                           cesium.viewer,
-                          "http://localhost:5173/src/data/tiles/imagery/{z}/{x}/{reverseY}.png",
+                          `${tileBaseUrl}/src/data/tiles/imagery/{z}/{x}/{reverseY}.png`,
                           imageId,
                           extents,
                           setShowCredsExpiredAlert
                         );
-                        resolve();
+                        resolve(layer);
                       } catch (error) {
                         reject(error);
                       } finally {
@@ -562,7 +568,7 @@ export async function loadImageInCesium(
   s3Object: string,
   imageId: string,
   setShowCredsExpiredAlert: (show: boolean) => void
-): Promise<void> {
+): Promise<ImageryLayer | undefined> {
   const fileName = s3Object.split("/").pop();
   if (!fileName) {
     throw new Error("Invalid S3 object key");
@@ -603,7 +609,7 @@ export async function loadImageInCesium(
       });
     });
 
-    await convertImageToCesium(
+    return await convertImageToCesium(
       cesium,
       fileName,
       imageId,
@@ -629,7 +635,7 @@ export async function loadS3GeoJson(
   s3Object: string,
   resultsColor: string,
   setShowCredsExpiredAlert: (show: boolean) => void
-): Promise<number> {
+): Promise<{ dataSource: GeoJsonDataSource; featureCount: number }> {
   const fileName = s3Object.split("/").pop();
   if (!fileName) {
     throw new Error("Invalid S3 object key");
@@ -667,14 +673,14 @@ export async function loadS3GeoJson(
     });
 
     const splitName = s3Object.split(".")[0].split("/");
-    const { featureCount } = await loadGeoJson(
+    const result = await loadGeoJson(
       cesium.viewer,
       mapData,
       splitName[splitName.length - 1],
       resultsColor
     );
     console.log(`Successfully loaded results for: ${fileName}!`);
-    return featureCount;
+    return result;
   } catch (error) {
     console.error("Error loading S3 GeoJSON:", error);
     throw error;
