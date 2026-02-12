@@ -45,7 +45,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "cesium": "^1.137.0",
     "electron": "^40.0.0",
-    "electron-builder": "^26.5.0",
+    "electron-builder": "^26.7.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
