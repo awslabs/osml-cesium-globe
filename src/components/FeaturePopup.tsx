@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Floating popup that displays feature properties when a GeoJSON feature is clicked.
+ */
+
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { CesiumContext } from "resium";
 import * as Cesium from "cesium";

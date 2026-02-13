@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** SageMaker endpoint discovery for model selection. */
+
 import {
   EndpointSummary,
   ListEndpointsCommand,
@@ -10,10 +12,10 @@ import { getAWSCreds, isCredentialError, REGION } from "@/config";
 import { logger } from "@/utils/logger";
 
 /**
- * Retrieves a list of all SageMaker endpoints
- * @param setShowCredsExpiredAlert {(arg0: boolean) => void} A function to set the state of the credential expired alert
- * @returns {Promise<(string | undefined)[] | undefined>} A Promise that resolves to array of endpoint names or undefined
- * @throws will throw an error if one occurs during the AWS call or if it's not instance of CredsExpiredAlert
+ * Retrieves a list of all SageMaker endpoints.
+ *
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @returns Array of endpoint names, or undefined if none exist.
  */
 export async function getListOfSMEndpoints(
   setShowCredsExpiredAlert: (arg0: boolean) => void

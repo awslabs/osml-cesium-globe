@@ -1,37 +1,22 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** ArcGIS imagery provider configurations for the Cesium base layer picker. */
+
 import * as Cesium from "cesium";
 
-/**
- * Imagery provider data.
- */
+/** Descriptor for a single ArcGIS imagery provider entry. */
 interface ImageryProviderData {
-  /**
-   * The name of the imagery provider
-   */
   name: string;
-
-  /**
-   * The URL of the provider's icon
-   */
   iconUrl: string;
-
-  /**
-   * The tooltip of the provider
-   */
   tooltip: string;
-
-  /**
-   * The URL for the imagery
-   */
   url: string;
 }
 
 /**
- * Generates a Cesium.ProviderViewModel based on the provided imagery data
+ * Generates a Cesium ProviderViewModel from the given imagery data.
  *
- * @param data - The imagery data
- * @returns A Cesium.ProviderViewModel instance with the provided details
+ * @param data - Imagery provider descriptor.
+ * @returns A configured ProviderViewModel instance.
  */
 function generateImageryProvider(
   data: ImageryProviderData
@@ -47,8 +32,9 @@ function generateImageryProvider(
 }
 
 /**
- * Generates imagery providers objects based on the predefined data.
- * @returns {Cesium.ProviderViewModel[]} - Array of ProviderViewModel objects.
+ * Generates the full list of imagery provider view models from predefined data.
+ *
+ * @returns Array of ProviderViewModel objects for the base layer picker.
  */
 export function generateImageryProviders(): Cesium.ProviderViewModel[] {
   const imageryData: ImageryProviderData[] = [

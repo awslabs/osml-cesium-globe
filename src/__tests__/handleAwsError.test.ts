@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Tests for the shared AWS credential error handler. */
+
 import { handleAwsError } from "@/hooks/useS3Browser";
 
 describe("handleAwsError", () => {

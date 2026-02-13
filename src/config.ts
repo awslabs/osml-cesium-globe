@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Application-wide configuration constants, AWS credential helpers, and region resolution. */
+
 import { join } from "node:path";
 
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
@@ -64,6 +66,7 @@ export const REGION_SOURCE: RegionSource = regionResolution.source;
 
 // ── AWS configuration diagnostics ──────────────────────────────────────────
 
+/** A diagnostic warning about AWS configuration issues. */
 export interface ConfigWarning {
   severity: "error" | "warning";
   title: string;
@@ -171,13 +174,14 @@ export function isCredentialError(e: unknown): boolean {
   return statusCode === 400 || statusCode === 401 || statusCode === 403;
 }
 
-// grab the aws credentials
+/** AWS credential set parsed from ~/.aws/credentials. */
 interface Credentials {
   accessKeyId: string;
   secretAccessKey: string;
   sessionToken: string | undefined;
 }
 
+/** Reads AWS credentials from the default profile in ~/.aws/credentials. */
 export function getAWSCreds(): Credentials | undefined {
   // Grab the AWS credentials from the file system
   const fileContents: string = readFileSync(

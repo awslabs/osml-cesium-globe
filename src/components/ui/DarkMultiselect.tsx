@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Custom dark-themed multi-select dropdown with tag display.
+ */
+
 import React, { useEffect, useRef, useState } from "react";
 
 import type { LabeledOption } from "./types";

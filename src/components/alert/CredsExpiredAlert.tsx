@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Toast alert shown when AWS credentials expire, with retry functionality.
+ */
+
 import { useState } from "react";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { getAWSCreds, isCredentialError, REGION } from "@/config";

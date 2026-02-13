@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Tests for GeoJSON feature property formatting and grouping. */
+
 import { formatFeatureProperties, type PropertyGroup } from "@/utils/cesiumFormatters";
 
 describe("formatFeatureProperties", () => {

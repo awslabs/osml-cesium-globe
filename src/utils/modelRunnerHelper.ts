@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Orchestrates image processing requests via SQS and monitors job status. */
+
 import React from "react";
 import {
   GetQueueUrlCommand,
@@ -29,6 +31,7 @@ import type {
 } from "@/types";
 import { logger } from "@/utils/logger";
 
+/** Payload sent to the SQS image request queue for model processing. */
 export interface ImageRequest {
   jobId: string;
   jobName: string;
@@ -46,10 +49,36 @@ export interface ImageRequest {
   featureProperties?: string;
 }
 
+/** Creates a new SQS client with the current AWS credentials. */
 function getSQSClient() {
   return new SQSClient({ region: REGION, credentials: getAWSCreds() });
 }
 
+/**
+ * Submits an image processing job and monitors it until completion.
+ *
+ * @param jobId - Unique identifier for the processing job.
+ * @param s3Uri - S3 URI of the source image.
+ * @param imageReadRole - IAM role ARN for reading the image.
+ * @param modelValue - SageMaker endpoint or model name.
+ * @param modelInvokeModeValue - Invocation mode for the model.
+ * @param modelInvokeRole - IAM role ARN for invoking the model.
+ * @param selectedOutputs - Output destinations selected by the user.
+ * @param tileSizeValue - Tile size in pixels for the image processor.
+ * @param tileOverlapValue - Tile overlap in pixels.
+ * @param formatValue - Tile format (e.g. PNG, NITF).
+ * @param compressionValue - Tile compression type.
+ * @param featureDistillationAlgorithm - Post-processing algorithm (e.g. NMS, SOFT_NMS, NONE).
+ * @param featureDistillationIouThreshold - IoU threshold for feature distillation.
+ * @param featureDistillationSkipBoxThreshold - Skip-box threshold for SOFT_NMS / NMW / WBF.
+ * @param featureDistillationSigma - Sigma value for SOFT_NMS.
+ * @param roiWkt - WKT string defining the region of interest.
+ * @param featureProperties - Additional feature properties filter.
+ * @param textPrompt - Optional text prompt for prompt-based models.
+ * @param imageRequestStatus - Current image request state (unused, kept for API compat).
+ * @param setImageRequestStatus - React setter for updating job status in the UI.
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ */
 export async function runModelOnImage(
   jobId: string,
   s3Uri: string,
@@ -116,6 +145,7 @@ export async function runModelOnImage(
   );
 }
 
+/** Polls the SQS status queue until the image job completes or retries are exhausted. */
 async function monitorJobStatus(
   imageId: string,
   setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>,
@@ -208,6 +238,7 @@ async function monitorJobStatus(
   }
 }
 
+/** Sends an image processing request to the SQS request queue. */
 async function queueImageProcessingJob(
   imageProcessingRequest: ImageRequest,
   setShowCredsExpiredAlert: (show: boolean) => void
@@ -235,6 +266,7 @@ async function queueImageProcessingJob(
   }
 }
 
+/** Builds the feature distillation config for the chosen algorithm. */
 function build_feature_distillation_obj(
   featureDistillationAlgorithm: string,
   featureDistillationIouThreshold: number,
@@ -263,6 +295,7 @@ function build_feature_distillation_obj(
   }
 }
 
+/** Assembles the full ImageRequest payload from user-supplied parameters. */
 async function buildImageProcessingRequest(
   jobId: string,
   s3Uri: string,

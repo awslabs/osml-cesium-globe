@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Tests for the structured logger utility. */
+
 import { logger } from "@/utils/logger";
 
 describe("logger", () => {

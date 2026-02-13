@@ -1,3 +1,10 @@
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
+
+/**
+ * Electron auto-updater integration. Checks for updates, manages downloads,
+ * and communicates progress to the renderer process via IPC.
+ */
+
 import { app, ipcMain } from 'electron'
 import {
   type ProgressInfo,

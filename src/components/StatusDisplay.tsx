@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Wrapper component that conditionally renders the image request status card.
+ */
+
 import React from "react";
 
 import ImageRequestStatus from "@/components/ImageRequestStatus";

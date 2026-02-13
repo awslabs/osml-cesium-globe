@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Dark-themed form field wrapper with label and optional description.
+ */
+
 import React from "react";
 
 interface DarkFormFieldProps {

@@ -1,0 +1,112 @@
+---
+description: Comment and documentation standards for all source files
+alwaysApply: true
+---
+
+# Comment Standards
+
+## File Structure (top to bottom)
+
+1. **Copyright header** — first line of every file
+2. **Module docstring** — brief JSDoc (`/** */`) or Python docstring (`"""`) explaining the file's purpose
+3. **Imports**
+4. **Section dividers** (optional, for files >100 lines with distinct logical groups)
+5. **Code with inline comments**
+
+## TypeScript / JavaScript
+
+### Copyright Header
+
+```typescript
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
+```
+
+### Module Docstring
+
+Every file gets a JSDoc block after the copyright line describing purpose and scope:
+
+```typescript
+/**
+ * Manages the lifecycle of loaded Cesium resources (GeoJSON, imagery).
+ * Provides React context for adding, removing, toggling, and zooming to resources.
+ */
+```
+
+### Exported Functions — Full JSDoc
+
+```typescript
+/**
+ * Loads an image from S3 into Cesium, downloading it first if not cached locally.
+ *
+ * @param cesium - Cesium viewer wrapper.
+ * @param bucket - S3 bucket name.
+ * @returns The added imagery layer, or undefined if credentials expired.
+ */
+export async function loadImageInCesium(cesium: ..., bucket: string): Promise<ImageryLayer | undefined> {
+```
+
+### Internal Functions — Concise JSDoc
+
+```typescript
+/** Stops and removes a Docker container by name. */
+function stopAndRemoveContainer(containerName: string): void {
+```
+
+### Exported Interfaces/Types — Brief JSDoc
+
+```typescript
+/** A loaded GeoJSON feature collection displayed on the Cesium globe. */
+export interface FeatureCollectionResource { ... }
+```
+
+### Section Dividers
+
+Use in long files with distinct logical groups:
+
+```typescript
+/* ── Section Title ───────────────────────────────────────────────────── */
+```
+
+### Inline Comments
+
+- Explain **why**, not **what**
+- Use `//` style
+- Place on the line above the code, not at end of line (unless very short)
+
+### TODOs
+
+```typescript
+// TODO: description of work to be done
+```
+
+## Python
+
+### Copyright + Module Docstring
+
+```python
+# Copyright 2025-2026 Amazon.com, Inc. or its affiliates.
+
+"""
+Brief description of the module.
+
+Extended description if needed.
+"""
+```
+
+### Function Docstrings — Sphinx-style
+
+```python
+def get_extents(dataset_path: str) -> dict:
+    """
+    Returns the geographic extents of the given raster dataset.
+
+    :param dataset_path: Path to the raster dataset.
+    :return: Dictionary with keys 'north', 'south', 'east', 'west'.
+    """
+```
+
+## What NOT to Comment
+
+- Do not restate obvious code (`// get the layers` before `const layers = ...`)
+- Do not wrap TODOs in `/** */` blocks — use `//` line comments
+- Do not add `@param` for internal helpers with obvious signatures

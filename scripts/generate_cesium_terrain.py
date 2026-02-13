@@ -1,4 +1,11 @@
-# Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+# Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
+
+"""
+Generate Cesium terrain tiles from GeoTIFF files using Docker-based ctb-tile.
+
+Automates the conversion of raster elevation data into quantized-mesh terrain
+tiles compatible with the CesiumJS viewer.
+"""
 
 import argparse
 import datetime

@@ -1,3 +1,10 @@
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
+
+/**
+ * Electron main process. Creates the browser window, loads the app,
+ * and manages the application lifecycle.
+ */
+
 import { app, BrowserWindow, shell, ipcMain } from 'electron'
 import { release } from 'node:os'
 import { join } from 'node:path'

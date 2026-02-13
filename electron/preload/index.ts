@@ -1,3 +1,10 @@
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
+
+/**
+ * Electron preload script. Shows a loading spinner while the app initializes
+ * and removes it when the renderer signals readiness.
+ */
+
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
   return new Promise(resolve => {
     if (condition.includes(document.readyState)) {

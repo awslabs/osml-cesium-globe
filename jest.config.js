@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Jest test runner configuration with ts-jest and path alias support. */
+
 /** @type {import('jest').Config} */
 const config = {
   preset: "ts-jest",

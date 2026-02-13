@@ -1,4 +1,8 @@
-// Copyright 2023-2025 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
+
+/**
+ * OSML logo overlay displayed on the globe.
+ */
 
 import React from 'react';
 import './Logo.css';

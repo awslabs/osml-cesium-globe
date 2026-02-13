@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Tests for AWS credential error detection logic. */
+
 import { isCredentialError } from "@/config";
 
 describe("isCredentialError", () => {

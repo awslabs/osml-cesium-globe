@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** S3 bucket and object operations (list, download) for the application. */
+
 import {
   _Object,
   Bucket,
@@ -26,8 +28,9 @@ const s3Client: S3Client = new S3Client({
 
 /**
  * Fetch the list of S3 Buckets.
- * @param {Function} setShowCredsExpiredAlert - Function to handle alert showing for expiration credentials.
- * @returns {Promise<Array<Bucket | undefined> | null>} - A Promise that resolves with an Array of Buckets or undefined or null.
+ *
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @returns Array of Buckets, or null on failure.
  */
 export async function getListOfS3Buckets(
   setShowCredsExpiredAlert: (value: boolean) => void
@@ -64,9 +67,10 @@ export async function getListOfS3Buckets(
 
 /**
  * Fetch the list of S3 Objects from a specified Bucket.
- * @param {string} bucketName - The name of the bucket to fetch Objects from.
- * @param {Function} setShowCredsExpiredAlert - Function to handle alert showing for expiration credentials.
- * @returns {Promise<Array<S3Object> | string | null>} - A Promise that resolves with an Array of S3 Objects or a string message or null.
+ *
+ * @param bucketName - The name of the bucket to fetch objects from.
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @returns Array of S3 objects, or null on failure.
  */
 export async function getListOfS3Objects(
   bucketName: string,
@@ -95,13 +99,11 @@ export async function getListOfS3Objects(
 
 /**
  * Load a specified S3 Object.
- * @param {Object} s3Object - The S3 Object to load.
- * @param {string} s3Object.name - The name of the S3 Object.
- * @param {string} s3Object.bucket - The bucket that the S3 Object comes from.
- * @param {string} s3Object.date - The date that the S3 Object was created.
- * @param {Function} setShowCredsExpiredAlert - Function to handle alert showing for expiration credentials.
- * @param {boolean} asBinary - Optional flag, if true the object will be returned as Byte Array, otherwise as a String.
- * @returns {Promise<string | Uint8Array | null>} - A Promise that resolves with a string, ByteString or null.
+ *
+ * @param s3Object - The S3 object descriptor (name, bucket, date).
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @param asBinary - If true, the object is returned as a Uint8Array; otherwise as a string.
+ * @returns The object contents, or null on failure.
  */
 export async function loadS3Object(
   s3Object: {
@@ -112,9 +114,7 @@ export async function loadS3Object(
   setShowCredsExpiredAlert: (value: boolean) => void,
   asBinary?: boolean
 ): Promise<string | Uint8Array | null> {
-  /**
-   * TODO: Convert argument into List, implement foreach and download s3 to local drive
-   */
+  // TODO: Convert argument into list and download S3 objects to local drive
   try {
     const response: GetObjectCommandOutput = await s3Client.send(
       new GetObjectCommand({ Bucket: s3Object.bucket, Key: s3Object.name })

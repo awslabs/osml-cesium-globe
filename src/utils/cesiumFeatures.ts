@@ -31,6 +31,13 @@ export type FeaturePopupCallback = (data: {
 
 /**
  * Loads a GeoJSON data source into the Cesium viewer.
+ *
+ * @param map - The Cesium Viewer instance.
+ * @param mapData - Raw GeoJSON string to parse and display.
+ * @param jobId - Identifier used as the data source name.
+ * @param resultsColor - CSS color string for feature fill and stroke.
+ * @param onFeatureClick - Optional callback invoked when a feature is clicked.
+ * @returns The loaded data source and its feature count.
  */
 export async function loadGeoJson(
   map: Viewer,
@@ -146,6 +153,14 @@ export async function loadGeoJson(
 
 /**
  * Loads GeoJSON data from S3 into Cesium.
+ *
+ * @param cesium - Cesium viewer wrapper.
+ * @param bucket - S3 bucket name.
+ * @param s3Object - S3 object key for the GeoJSON file.
+ * @param resultsColor - CSS color string for feature fill and stroke.
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @param onFeatureClick - Optional callback invoked when a feature is clicked.
+ * @returns The loaded data source and its feature count.
  */
 export async function loadS3GeoJson(
   cesium: { viewer: Viewer },
@@ -206,6 +221,8 @@ export async function loadS3GeoJson(
 
 /**
  * Unloads all GeoJSON features from the Cesium viewer.
+ *
+ * @param map - The Cesium Viewer instance to clear.
  */
 export async function unloadAllGeoJsonFeatures(map: Viewer): Promise<void> {
   try {
