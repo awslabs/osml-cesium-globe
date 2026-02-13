@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * React context for managing the lifecycle of loaded Cesium resources (GeoJSON, imagery).
+ */
+
 import * as Cesium from "cesium";
 import { GeoJsonDataSource, ImageryLayer, Viewer } from "cesium";
 import React, { createContext, useCallback, useContext, useState } from "react";
@@ -7,6 +11,7 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import { CAMERA_FLY_DURATION_SECONDS } from "@/config";
 import { logger } from "@/utils/logger";
 
+/** A loaded GeoJSON feature collection displayed on the Cesium globe. */
 export interface FeatureCollectionResource {
   id: string;
   name: string;
@@ -20,6 +25,7 @@ export interface FeatureCollectionResource {
   dataSource: GeoJsonDataSource;
 }
 
+/** A loaded imagery layer displayed on the Cesium globe. */
 export interface ImageryResource {
   id: string;
   name: string;
@@ -31,6 +37,7 @@ export interface ImageryResource {
   imageryLayer: ImageryLayer;
 }
 
+/** Union of all resource types that can be loaded onto the globe. */
 export type LoadedResource = FeatureCollectionResource | ImageryResource;
 
 interface ResourceContextValue {

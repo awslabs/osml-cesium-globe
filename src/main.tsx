@@ -1,7 +1,8 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 /**
- * @file This file is the entry point of the React application.
+ * Application entry point. Mounts the React app into the DOM
+ * and configures Cesium Ion settings.
  */
 
 import React from "react";
@@ -22,18 +23,12 @@ if (!rootElement) {
   throw new Error("Root element not found.");
 }
 
-/**
- * @description Responsible for rendering
- * the entire React application to the DOM
- */
+// Mount the React app into the root DOM element
 createRoot(rootElement).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
 
-/**
- * @description Dispatch a postMessage
- * event to any listening window with the given payload
- */
+// Signal the loading screen to dismiss
 window.postMessage({ payload: "removeLoading" }, "*");

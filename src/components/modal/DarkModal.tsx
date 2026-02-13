@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Reusable dark-themed modal dialog with header, body, and footer slots.
+ */
+
 import React, { useEffect, useRef } from "react";
 import "./DarkModal.css";
 

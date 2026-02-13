@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Modal for submitting image processing requests to the ModelRunner service.
+ */
+
 import React from "react";
 import { Color } from "cesium";
 import { useContext, useEffect, useState } from "react";
@@ -39,9 +43,7 @@ import {
 import ExpandSection from "../ui/ExpandSection";
 import DarkModal from "./DarkModal";
 
-/* -----------------------------------------------
-   Color options
-   ----------------------------------------------- */
+/* ── Color options ───────────────────────────────────────────────────── */
 const COLOR_OPTIONS: LabeledOption[] = [
   { label: "Red", value: Color.RED.toCssColorString() },
   { label: "Orange", value: Color.ORANGE.toCssColorString() },
@@ -54,9 +56,7 @@ const COLOR_OPTIONS: LabeledOption[] = [
   { label: "Fuchsia", value: Color.FUCHSIA.toCssColorString() }
 ];
 
-/* -----------------------------------------------
-   Main Modal Component
-   ----------------------------------------------- */
+/* ── Main Modal Component ───────────────────────────────────────────── */
 const NewRequestModal = ({
   showImageRequestModal,
   setShowImageRequestModal,

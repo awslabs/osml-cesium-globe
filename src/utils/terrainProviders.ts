@@ -1,7 +1,10 @@
 // Copyright 2024-2026 Amazon.com, Inc. or its affiliates.
 
+/** Terrain provider configuration for the Cesium viewer. */
+
 import * as Cesium from "cesium";
 
+/** Builds the list of terrain provider view models available in the viewer. */
 export function generateTerrainProviders() {
   const terrainViewModels = [];
   const terrainUrl = "src/data/tiles/terrain";

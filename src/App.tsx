@@ -1,5 +1,7 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/** Root React component that initializes the Cesium viewer and composes the application layout. */
+
 import "./styles.css";
 
 import React, { useState, useEffect, useCallback } from "react";

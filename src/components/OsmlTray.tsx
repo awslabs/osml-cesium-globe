@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Top-level tray container that positions the OSML menu panel.
+ */
+
 import React from "react";
 
 import OsmlMenu from "@/components/OsmlMenu";

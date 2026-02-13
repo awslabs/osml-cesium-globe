@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Modal for importing imagery from local files or S3 buckets into the globe.
+ */
+
 import fs from "fs";
 import { useContext, useState } from "react";
 import { CesiumContext } from "resium";

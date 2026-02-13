@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Auto-dismissing toast stack for AWS configuration warnings detected at startup.
+ */
+
 import { useEffect, useState } from "react";
 import { getConfigWarnings, type ConfigWarning } from "@/config";
 import "./ConfigWarnings.css";

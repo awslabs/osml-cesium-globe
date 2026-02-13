@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Dark-themed autosuggest input with dropdown filtering and keyboard navigation.
+ */
+
 import React, {
   useCallback,
   useEffect,

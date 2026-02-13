@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Animated status card showing image processing request progress and results.
+ */
+
 import React, { useEffect, useState } from "react";
 
 import type { ImageRequestData, ImageRequestState } from "@/types";

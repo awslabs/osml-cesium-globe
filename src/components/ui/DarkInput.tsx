@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Minimal dark-themed text/number input component.
+ */
+
 import React from "react";
 
 interface DarkInputProps {

@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Modal for importing GeoJSON feature collections from S3 or local storage.
+ */
+
 import fs from "fs";
 import { useContext, useState } from "react";
 import { CesiumContext } from "resium";

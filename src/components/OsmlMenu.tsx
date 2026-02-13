@@ -1,5 +1,9 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+/**
+ * Main slide-out panel with action buttons, layer management, and modal triggers.
+ */
+
 import React, { useContext, useState } from "react";
 import { CesiumContext } from "resium";
 

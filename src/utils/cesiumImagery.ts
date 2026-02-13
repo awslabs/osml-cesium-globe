@@ -202,6 +202,12 @@ function saveCachedExtents(tileCacheDir: string, extents: CesiumRectDeg): void {
  * Converts a local image to Cesium tiles using Docker-based ctb-tile.
  * Images are first warped to EPSG:4326 via gdalwarp to handle projected
  * coordinate systems and rotation before tiling.
+ *
+ * @param cesium - Cesium viewer wrapper.
+ * @param fileName - Name of the image file in the local images folder.
+ * @param imageId - Unique identifier for the image (used for credit attribution).
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @returns The added imagery layer, or undefined on failure.
  */
 export async function convertImageToCesium(
   cesium: { viewer: Viewer },
@@ -334,7 +340,14 @@ export async function convertImageToCesium(
 }
 
 /**
- * Loads an image from S3 into Cesium (downloads if not cached locally).
+ * Loads an image from S3 into Cesium, downloading it first if not cached locally.
+ *
+ * @param cesium - Cesium viewer wrapper.
+ * @param bucket - S3 bucket name.
+ * @param s3Object - S3 object key for the image.
+ * @param imageId - Unique identifier for the image.
+ * @param setShowCredsExpiredAlert - Callback to surface credential expiry to the UI.
+ * @returns The added imagery layer, or undefined if credentials expired.
  */
 export async function loadImageInCesium(
   cesium: { viewer: Viewer },
