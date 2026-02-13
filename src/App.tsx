@@ -10,6 +10,7 @@ import OsmlTray from "@/components/OsmlTray";
 import StatusDisplay from "@/components/StatusDisplay";
 import Logo from "@/components/Logo";
 import FeaturePopup, { type FeaturePopupData } from "@/components/FeaturePopup";
+import ConfigWarnings from "@/components/alert/ConfigWarnings";
 import { ResourceProvider } from "@/context/ResourceContext";
 
 /** Natural Earth II fallback (offline, bundled with Cesium) */
@@ -81,6 +82,8 @@ const App = () => {
   if (!baseLayer) return null;
 
   return (
+    <>
+    <ConfigWarnings />
     <ResiumViewer
       ref={viewerRef}
       full
@@ -113,6 +116,7 @@ const App = () => {
         )}
       </ResourceProvider>
     </ResiumViewer>
+    </>
   );
 };
 

@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import {
   EndpointSummary,
@@ -6,8 +6,7 @@ import {
   SageMakerClient
 } from "@aws-sdk/client-sagemaker";
 
-import CredsExpiredAlert from "@/components/alert/CredsExpiredAlert";
-import { getAWSCreds, REGION } from "@/config";
+import { getAWSCreds, isCredentialError, REGION } from "@/config";
 
 /**
  * Retrieves a list of all SageMaker endpoints
@@ -36,10 +35,9 @@ export async function getListOfSMEndpoints(
       (endpoint: EndpointSummary) => endpoint.EndpointName
     );
   } catch (e: unknown) {
-    if (e instanceof CredsExpiredAlert) {
+    console.error("Failed to list SageMaker endpoints:", e);
+    if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
-    } else {
-      throw e;
     }
   }
   return;

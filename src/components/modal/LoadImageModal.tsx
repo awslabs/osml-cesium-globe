@@ -62,28 +62,38 @@ const LoadImageModal = ({
   useEffect(() => {
     if (!showLoadImageModal) return;
     (async () => {
-      setBucketStatus("loading");
-      const res: any = await getListOfS3Buckets(setShowCredsExpiredAlert);
-      if (res !== undefined) {
-        setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
-        setBucketStatus("finished");
-      } else {
+      try {
+        setBucketStatus("loading");
+        const res = await getListOfS3Buckets(setShowCredsExpiredAlert);
+        if (res && res.length > 0) {
+          setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
+          setBucketStatus("finished");
+        } else {
+          setBucketStatus("error");
+        }
+      } catch (e) {
+        console.error("Error loading S3 buckets:", e);
         setBucketStatus("error");
       }
     })();
   }, [showLoadImageModal, showCredsExpiredAlert]);
 
   const loadS3Objects = async (bucket: string) => {
-    setImageStatus("loading");
-    const res: any = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
-    if (res !== undefined) {
-      const imageFiles = res
-        .map((o: any) => o["Key"])
-        .filter((k: string) => isImageFile(k))
-        .map((k: string) => ({ value: k }));
-      setS3Objects(imageFiles);
-      setImageStatus("finished");
-    } else {
+    try {
+      setImageStatus("loading");
+      const res = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
+      if (res && Array.isArray(res) && res.length > 0) {
+        const imageFiles = res
+          .map((o: any) => o["Key"])
+          .filter((k: string) => isImageFile(k))
+          .map((k: string) => ({ value: k }));
+        setS3Objects(imageFiles);
+        setImageStatus("finished");
+      } else {
+        setImageStatus("error");
+      }
+    } catch (e) {
+      console.error("Error loading S3 objects:", e);
       setImageStatus("error");
     }
   };

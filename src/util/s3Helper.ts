@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+// Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import {
   _Object,
@@ -12,12 +12,15 @@ import {
   S3Client
 } from "@aws-sdk/client-s3";
 
-import CredsExpiredAlert from "@/components/alert/CredsExpiredAlert";
-import { getAWSCreds, REGION } from "@/config";
+import { getAWSCreds, isCredentialError, REGION } from "@/config";
 
 const s3Client: S3Client = new S3Client({
   region: REGION,
-  credentials: getAWSCreds()
+  credentials: () => {
+    const creds = getAWSCreds();
+    if (!creds) return Promise.reject(new Error("No AWS credentials found"));
+    return Promise.resolve(creds);
+  }
 });
 
 /**
@@ -51,10 +54,9 @@ export async function getListOfS3Buckets(
       );
     }
   } catch (e: unknown) {
-    if (e instanceof CredsExpiredAlert) {
+    console.error("Failed to list S3 buckets:", e);
+    if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
-    } else {
-      throw e;
     }
   }
 
@@ -83,10 +85,9 @@ export async function getListOfS3Objects(
       console.error("Cannot fetch S3 Objects from this bucket: " + bucketName);
     }
   } catch (e: unknown) {
-    if (e instanceof CredsExpiredAlert) {
+    console.error(`Failed to list objects in bucket "${bucketName}":`, e);
+    if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
-    } else {
-      throw e;
     }
   }
 
@@ -130,10 +131,9 @@ export async function loadS3Object(
       }
     }
   } catch (e: unknown) {
-    if (e instanceof CredsExpiredAlert) {
+    console.error(`Failed to load S3 object "${s3Object.name}":`, e);
+    if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
-    } else {
-      throw e;
     }
   }
 
