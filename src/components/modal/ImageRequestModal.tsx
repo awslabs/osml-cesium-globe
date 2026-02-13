@@ -190,12 +190,17 @@ const NewRequestModal = ({
   // Load S3 buckets
   useEffect(() => {
     (async () => {
-      setBucketStatus("loading");
-      const res: any = await getListOfS3Buckets(setShowCredsExpiredAlert);
-      if (res !== undefined) {
-        setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
-        setBucketStatus("finished");
-      } else {
+      try {
+        setBucketStatus("loading");
+        const res = await getListOfS3Buckets(setShowCredsExpiredAlert);
+        if (res && res.length > 0) {
+          setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
+          setBucketStatus("finished");
+        } else {
+          setBucketStatus("error");
+        }
+      } catch (e) {
+        console.error("Error loading S3 buckets:", e);
         setBucketStatus("error");
       }
     })();
@@ -204,24 +209,34 @@ const NewRequestModal = ({
   // Load SM endpoints
   useEffect(() => {
     (async () => {
-      setModelStatus("loading");
-      const res: any = await getListOfSMEndpoints(setShowCredsExpiredAlert);
-      if (res !== undefined) {
-        setSMModels(res.map((e: string) => ({ value: e })));
-        setModelStatus("finished");
-      } else {
+      try {
+        setModelStatus("loading");
+        const res = await getListOfSMEndpoints(setShowCredsExpiredAlert);
+        if (res && res.length > 0) {
+          setSMModels(res.filter((e): e is string => !!e).map((e) => ({ value: e })));
+          setModelStatus("finished");
+        } else {
+          setModelStatus("error");
+        }
+      } catch (e) {
+        console.error("Error loading SageMaker endpoints:", e);
         setModelStatus("error");
       }
     })();
   }, [showCredsExpiredAlert]);
 
   const loadS3Objects = async (bucket: string) => {
-    setImageStatus("loading");
-    const res: any = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
-    if (res !== undefined) {
-      setS3Objects(res.map((o: any) => ({ value: o["Key"] })));
-      setImageStatus("finished");
-    } else {
+    try {
+      setImageStatus("loading");
+      const res = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
+      if (res && Array.isArray(res) && res.length > 0) {
+        setS3Objects(res.map((o: any) => ({ value: o["Key"] })));
+        setImageStatus("finished");
+      } else {
+        setImageStatus("error");
+      }
+    } catch (e) {
+      console.error("Error loading S3 objects:", e);
       setImageStatus("error");
     }
   };

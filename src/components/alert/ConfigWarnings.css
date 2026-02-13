@@ -1,0 +1,124 @@
+/* Copyright 2023-2026 Amazon.com, Inc. or its affiliates. */
+
+
+/* ── ConfigWarnings toast stack ─────────────────────────────────── */
+
+.cw-stack {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 520px;
+  width: 90vw;
+}
+
+/* ── Individual toast ──────────────────────────────────────────── */
+
+.cw-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  animation: cw-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.cw-toast--exit {
+  animation: cw-slide-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ── Content ───────────────────────────────────────────────────── */
+
+.cw-toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cw-toast-title {
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 2px;
+}
+
+.cw-toast-message {
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.72;
+}
+
+/* ── Action button (e.g. Retry) ────────────────────────────────── */
+
+.cw-toast-action {
+  flex-shrink: 0;
+  background: rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.cw-toast-action:hover {
+  background: rgba(220, 38, 38, 0.35);
+}
+
+.cw-toast-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Close button ──────────────────────────────────────────────── */
+
+.cw-toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  margin-top: 1px;
+}
+
+.cw-toast-close:hover {
+  opacity: 1;
+}
+
+/* ── Animations ────────────────────────────────────────────────── */
+
+@keyframes cw-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cw-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}

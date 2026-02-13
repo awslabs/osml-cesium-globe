@@ -27,10 +27,19 @@ export const S3_RESULTS_BUCKET_PREFIX: string = "mr-bucket-sink";
 export const KINESIS_RESULTS_STREAM_PREFIX: string = "mr-stream-sink";
 
 // deployment info — resolved from standard AWS sources, falls back to us-west-2
-function resolveRegion(): string {
+export type RegionSource = "AWS_REGION" | "AWS_DEFAULT_REGION" | "aws-config" | "default";
+
+interface RegionResolution {
+  region: string;
+  source: RegionSource;
+}
+
+function resolveRegion(): RegionResolution {
   // 1. Environment variables (same precedence the AWS SDK uses)
-  if (process.env.AWS_REGION) return process.env.AWS_REGION;
-  if (process.env.AWS_DEFAULT_REGION) return process.env.AWS_DEFAULT_REGION;
+  if (process.env.AWS_REGION)
+    return { region: process.env.AWS_REGION, source: "AWS_REGION" };
+  if (process.env.AWS_DEFAULT_REGION)
+    return { region: process.env.AWS_DEFAULT_REGION, source: "AWS_DEFAULT_REGION" };
 
   // 2. ~/.aws/config [default] profile
   try {
@@ -41,15 +50,126 @@ function resolveRegion(): string {
     const region = parser.get("default", "region", undefined) as
       | string
       | undefined;
-    if (region) return region.trim();
+    if (region) return { region: region.trim(), source: "aws-config" };
   } catch {
     // Config file missing or unreadable — fall through to default
   }
 
-  return "us-west-2";
+  return { region: "us-west-2", source: "default" };
 }
 
-export const REGION: string = resolveRegion();
+const regionResolution = resolveRegion();
+export const REGION: string = regionResolution.region;
+export const REGION_SOURCE: RegionSource = regionResolution.source;
+
+// ── AWS configuration diagnostics ──────────────────────────────────────────
+
+export interface ConfigWarning {
+  severity: "error" | "warning";
+  title: string;
+  message: string;
+}
+
+/** Synchronous check for file-level issues (missing creds file, region fallback). */
+function getStaticWarnings(): ConfigWarning[] {
+  const warnings: ConfigWarning[] = [];
+
+  // Check credentials file exists and has keys
+  try {
+    const creds = getAWSCreds();
+    if (!creds || !creds.accessKeyId || !creds.secretAccessKey) {
+      warnings.push({
+        severity: "error",
+        title: "AWS Credentials Missing",
+        message:
+          "No valid credentials found in ~/.aws/credentials. S3, SageMaker, and other AWS features will not work."
+      });
+    }
+  } catch {
+    warnings.push({
+      severity: "error",
+      title: "AWS Credentials Not Found",
+      message:
+        "Could not read ~/.aws/credentials. Configure your AWS CLI credentials to enable AWS features."
+    });
+  }
+
+  // Check region fallback
+  if (REGION_SOURCE === "default") {
+    warnings.push({
+      severity: "warning",
+      title: "Using Default Region",
+      message: `No AWS region configured — falling back to ${REGION}. Set AWS_REGION or configure ~/.aws/config to change this.`
+    });
+  }
+
+  return warnings;
+}
+
+/**
+ * Full config check: synchronous file checks + async STS validation.
+ * Returns all warnings (file-level + credential validity).
+ */
+export async function getConfigWarnings(): Promise<ConfigWarning[]> {
+  const warnings = getStaticWarnings();
+
+  // If creds file is missing/empty, skip the live check — already reported
+  const hasCredsFileError = warnings.some(
+    (w) => w.severity === "error" && w.title.startsWith("AWS Credentials")
+  );
+
+  if (!hasCredsFileError) {
+    try {
+      await new STSClient({
+        region: REGION,
+        credentials: getAWSCreds()
+      }).send(new GetCallerIdentityCommand({}));
+    } catch (e: unknown) {
+      const name = (e as { name?: string })?.name ?? "";
+      const isExpired =
+        name === "ExpiredToken" ||
+        name === "ExpiredTokenException" ||
+        name === "RequestExpired";
+
+      warnings.push({
+        severity: "error",
+        title: isExpired ? "AWS Credentials Expired" : "AWS Credentials Invalid",
+        message: isExpired
+          ? "Your AWS session token has expired. Refresh your credentials and restart the application."
+          : "Could not authenticate with AWS. Verify your credentials in ~/.aws/credentials are correct."
+      });
+    }
+  }
+
+  return warnings;
+}
+
+// ── Credential error detection (used by helpers) ───────────────────────────
+
+/** Known AWS SDK error names related to authentication / authorization failures */
+const CREDENTIAL_ERROR_NAMES = new Set([
+  "ExpiredToken",
+  "ExpiredTokenException",
+  "RequestExpired",
+  "InvalidClientTokenId",
+  "UnrecognizedClientException",
+  "InvalidIdentityToken",
+  "AccessDeniedException",
+  "AuthFailure",
+  "SignatureDoesNotMatch",
+  "IncompleteSignature"
+]);
+
+/** Returns true if the error is an AWS credentials / auth error. */
+export function isCredentialError(e: unknown): boolean {
+  const name = (e as { name?: string })?.name ?? "";
+  if (CREDENTIAL_ERROR_NAMES.has(name)) return true;
+
+  // Fallback: check for common HTTP status codes from auth failures
+  const statusCode = (e as { $metadata?: { httpStatusCode?: number } })?.$metadata
+    ?.httpStatusCode;
+  return statusCode === 400 || statusCode === 401 || statusCode === 403;
+}
 
 // grab the aws credentials
 interface Credentials {

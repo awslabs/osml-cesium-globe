@@ -57,28 +57,38 @@ const LoadDataModal = ({
   useEffect(() => {
     if (!showLoadDataModal) return;
     (async () => {
-      setBucketStatus("loading");
-      const res: any = await getListOfS3Buckets(setShowCredsExpiredAlert);
-      if (res !== undefined) {
-        setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
-        setBucketStatus("finished");
-      } else {
+      try {
+        setBucketStatus("loading");
+        const res = await getListOfS3Buckets(setShowCredsExpiredAlert);
+        if (res && res.length > 0) {
+          setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
+          setBucketStatus("finished");
+        } else {
+          setBucketStatus("error");
+        }
+      } catch (e) {
+        console.error("Error loading S3 buckets:", e);
         setBucketStatus("error");
       }
     })();
   }, [showLoadDataModal, showCredsExpiredAlert]);
 
   const loadS3Objects = async (bucket: string) => {
-    setGeojsonStatus("loading");
-    const res: any = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
-    if (res !== undefined) {
-      const geojsonFiles = res
-        .map((o: any) => o["Key"])
-        .filter((k: string) => k.endsWith(".geojson") || k.endsWith(".json"))
-        .map((k: string) => ({ value: k }));
-      setS3Objects(geojsonFiles);
-      setGeojsonStatus("finished");
-    } else {
+    try {
+      setGeojsonStatus("loading");
+      const res = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
+      if (res && Array.isArray(res) && res.length > 0) {
+        const geojsonFiles = res
+          .map((o: any) => o["Key"])
+          .filter((k: string) => k.endsWith(".geojson") || k.endsWith(".json"))
+          .map((k: string) => ({ value: k }));
+        setS3Objects(geojsonFiles);
+        setGeojsonStatus("finished");
+      } else {
+        setGeojsonStatus("error");
+      }
+    } catch (e) {
+      console.error("Error loading S3 objects:", e);
       setGeojsonStatus("error");
     }
   };
