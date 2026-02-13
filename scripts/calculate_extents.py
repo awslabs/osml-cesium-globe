@@ -112,32 +112,24 @@ def get_extents(dataset_path: str) -> dict:
                         # Last resort: use coordinates as-is (assuming they're already WGS84)
                         geo_corners.append((x, y))
         else:
-            # Use geotransform to calculate corner coordinates
-            # Using the geotransform: [x_origin, pixel_width, rotation, y_origin, rotation, pixel_height]
-            x_origin = geotransform[0]
-            pixel_width = geotransform[1]
-            y_origin = geotransform[3]
-            pixel_height = geotransform[5]
-
-            # Calculate the four corners in source coordinates
-            x_min = x_origin
-            x_max = x_origin + x_size * pixel_width
-            y_min = y_origin + y_size * pixel_height  # Note: pixel_height is usually negative
-            y_max = y_origin
-
-            # Ensure we have the correct min/max values
-            if y_min > y_max:
-                y_min, y_max = y_max, y_min
-            if x_min > x_max:
-                x_min, x_max = x_max, x_min
-
-            # Transform the four corners to WGS84
-            corners = [
-                (x_min, y_max),  # Top-left
-                (x_max, y_max),  # Top-right
-                (x_max, y_min),  # Bottom-right
-                (x_min, y_min)   # Bottom-left
+            # Use the full geotransform to calculate corner coordinates.
+            # GeoTransform: [x_origin, pixel_width, x_rotation, y_origin, y_rotation, pixel_height]
+            # Full formula:
+            #   x_geo = gt[0] + col * gt[1] + row * gt[2]
+            #   y_geo = gt[3] + col * gt[4] + row * gt[5]
+            # This correctly handles images with rotation (non-zero gt[2] and gt[4]).
+            corners_pixel = [
+                (0, 0),                  # Top-left
+                (x_size, 0),             # Top-right
+                (x_size, y_size),        # Bottom-right
+                (0, y_size)              # Bottom-left
             ]
+
+            corners = []
+            for col, row in corners_pixel:
+                x = geotransform[0] + col * geotransform[1] + row * geotransform[2]
+                y = geotransform[3] + col * geotransform[4] + row * geotransform[5]
+                corners.append((x, y))
 
             # Transform all corners to WGS84
             geo_corners = []

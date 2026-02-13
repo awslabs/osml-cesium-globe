@@ -9,6 +9,7 @@ import {
   LoadedResource,
   useResources
 } from "@/context/ResourceContext";
+import type { ImageRequestState } from "@/types";
 
 import CredsExpiredAlert from "./alert/CredsExpiredAlert";
 import LoadDataModal from "./modal/LoadDataModal";
@@ -18,11 +19,8 @@ import ImageRequestModal from "./modal/ImageRequestModal";
 import "./OsmlMenu.css";
 
 interface OsmlMenuProps {
-  imageRequestStatus: {
-    state: string;
-    data: Record<string, any>;
-  };
-  setImageRequestStatus: (status: { state: string; data: Record<string, any> }) => void;
+  imageRequestStatus: ImageRequestState;
+  setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>;
   onFeatureClick?: (data: import("@/components/FeaturePopup").FeaturePopupData | null) => void;
 }
 

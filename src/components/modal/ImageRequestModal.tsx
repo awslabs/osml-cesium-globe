@@ -18,16 +18,14 @@ import {
   DEFAULT_MODEL_INVOKE_MODE,
   DEFAULT_RESULTS_COLOR_OPTION
 } from "@/config";
-import {
-  FeatureCollectionResource,
-  ImageryResource,
-  LoadedResource,
-  useResources
-} from "@/context/ResourceContext";
-import { loadImageInCesium, loadS3GeoJson, type FeaturePopupCallback } from "@/util/cesiumHelper";
-import { runModelOnImage } from "@/util/mrHelper";
-import { getListOfS3Buckets, getListOfS3Objects } from "@/util/s3Helper";
-import { getListOfSMEndpoints } from "@/util/smHelper";
+import { ImageryResource, useResources } from "@/context/ResourceContext";
+import { useImageRequestResults } from "@/hooks/useImageRequestResults";
+import { useS3Browser } from "@/hooks/useS3Browser";
+import type { ImageRequestState } from "@/types";
+import { loadImageInCesium, type FeaturePopupCallback } from "@/utils/cesiumHelper";
+import { logger } from "@/utils/logger";
+import { runModelOnImage } from "@/utils/modelRunnerHelper";
+import { getListOfSMEndpoints } from "@/utils/sagemakerHelper";
 
 import {
   DarkAutosuggest,
@@ -38,78 +36,8 @@ import {
   type LabeledOption,
   type LoadingStatus
 } from "../ui/FormControls";
+import ExpandSection from "../ui/ExpandSection";
 import DarkModal from "./DarkModal";
-
-/* -----------------------------------------------
-   Load results helper
-   ----------------------------------------------- */
-async function loadResults(
-  cesium: any,
-  outputs: any[],
-  jobName: string,
-  jobId: string,
-  resultsColor: string,
-  setShowCredsExpiredAlert: any,
-  setImageRequestStatus: any,
-  addResource?: (resource: LoadedResource) => void,
-  onFeatureClick?: FeaturePopupCallback
-) {
-  let totalFeatures = 0;
-  for (const output of outputs) {
-    if (output.type === "S3") {
-      const s3Object = `${jobName}/${jobId}.geojson`;
-      const result = await loadS3GeoJson(
-        cesium,
-        output.bucket,
-        s3Object,
-        resultsColor,
-        setShowCredsExpiredAlert,
-        onFeatureClick
-      );
-      totalFeatures += result.featureCount;
-      if (addResource) {
-        addResource({
-          id: uuidv4(),
-          name: `${jobName} results`,
-          type: "feature-collection",
-          source: "s3",
-          sourceDetail: `${output.bucket}/${s3Object}`,
-          featureCount: result.featureCount,
-          color: resultsColor,
-          visible: true,
-          loadedAt: new Date(),
-          dataSource: result.dataSource
-        } as FeatureCollectionResource);
-      }
-    }
-  }
-  setImageRequestStatus((prev: { state: string; data: Record<string, any> }) => ({
-    ...prev,
-    data: { ...prev.data, featureCount: totalFeatures }
-  }));
-}
-
-/* -----------------------------------------------
-   Collapsible Section
-   ----------------------------------------------- */
-const ExpandSection: React.FC<{
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}> = ({ title, children, defaultOpen = false }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className={`dm-expand ${open ? "dm-expand--open" : ""}`}>
-      <button className="dm-expand-header" onClick={() => setOpen(!open)} type="button">
-        <span>{title}</span>
-        <svg className="dm-expand-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open && <div className="dm-expand-body">{children}</div>}
-    </div>
-  );
-};
 
 /* -----------------------------------------------
    Color options
@@ -138,12 +66,12 @@ const NewRequestModal = ({
   setShowCredsExpiredAlert,
   onFeatureClick
 }: {
-  showImageRequestModal: any;
-  setShowImageRequestModal: any;
-  imageRequestStatus: any;
-  setImageRequestStatus: any;
-  showCredsExpiredAlert: any;
-  setShowCredsExpiredAlert: any;
+  showImageRequestModal: boolean;
+  setShowImageRequestModal: (show: boolean) => void;
+  imageRequestStatus: ImageRequestState;
+  setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>;
+  showCredsExpiredAlert: boolean;
+  setShowCredsExpiredAlert: (show: boolean) => void;
   onFeatureClick?: FeaturePopupCallback;
 }) => {
   const cesium = useContext(CesiumContext);
@@ -151,9 +79,7 @@ const NewRequestModal = ({
 
   // Form state
   const [bucketValue, setBucketValue] = useState("");
-  const [bucketStatus, setBucketStatus] = useState<LoadingStatus>("pending");
   const [imageValue, setImageValue] = useState("");
-  const [imageStatus, setImageStatus] = useState<LoadingStatus>("pending");
   const [imageReadRole, setImageReadRole] = useState("");
   const [modelValue, setModelValue] = useState("");
   const [modelStatus, setModelStatus] = useState<LoadingStatus>("pending");
@@ -183,31 +109,24 @@ const NewRequestModal = ({
     { label: "Kinesis", value: "Kinesis" }
   ]);
 
-  const [s3Buckets, setS3Buckets] = useState<{ value: string }[]>([]);
   const [smModels, setSMModels] = useState<{ value: string }[]>([]);
-  const [s3Objects, setS3Objects] = useState<{ value: string }[]>([]);
 
-  // Load S3 buckets
-  useEffect(() => {
-    (async () => {
-      try {
-        setBucketStatus("loading");
-        const res = await getListOfS3Buckets(setShowCredsExpiredAlert);
-        if (res && res.length > 0) {
-          setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
-          setBucketStatus("finished");
-        } else {
-          setBucketStatus("error");
-        }
-      } catch (e) {
-        console.error("Error loading S3 buckets:", e);
-        setBucketStatus("error");
-      }
-    })();
-  }, [showCredsExpiredAlert]);
+  // S3 bucket/object browsing via shared hook
+  const {
+    buckets: s3Buckets,
+    bucketStatus,
+    objects: s3Objects,
+    objectStatus: imageStatus,
+    loadObjects: loadS3Objects,
+    resetObjects
+  } = useS3Browser({
+    enabled: showImageRequestModal,
+    setShowCredsExpiredAlert
+  });
 
   // Load SM endpoints
   useEffect(() => {
+    if (!showImageRequestModal) return;
     (async () => {
       try {
         setModelStatus("loading");
@@ -219,43 +138,22 @@ const NewRequestModal = ({
           setModelStatus("error");
         }
       } catch (e) {
-        console.error("Error loading SageMaker endpoints:", e);
+        logger.error("Error loading SageMaker endpoints:", e);
         setModelStatus("error");
       }
     })();
-  }, [showCredsExpiredAlert]);
+  }, [showImageRequestModal, showCredsExpiredAlert]);
 
-  const loadS3Objects = async (bucket: string) => {
-    try {
-      setImageStatus("loading");
-      const res = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
-      if (res && Array.isArray(res) && res.length > 0) {
-        setS3Objects(res.map((o: any) => ({ value: o["Key"] })));
-        setImageStatus("finished");
-      } else {
-        setImageStatus("error");
-      }
-    } catch (e) {
-      console.error("Error loading S3 objects:", e);
-      setImageStatus("error");
-    }
-  };
-
-  // Auto-load results on success
-  useEffect(() => {
-    const getData = async (cesium: any, outputs: any, jobName: string, jobId: string) => {
-      if (!imageRequestStatus.data.featureCount) {
-        await loadResults(
-          cesium, outputs, jobName, jobId,
-          resultsColor.value, setShowCredsExpiredAlert, setImageRequestStatus, addResource,
-          onFeatureClick
-        );
-      }
-    };
-    if (imageRequestStatus.state === "success") {
-      getData(cesium, imageRequestStatus.data.outputs, imageRequestStatus.data.jobName, imageRequestStatus.data.jobId);
-    }
-  }, [imageRequestStatus.state, showCredsExpiredAlert]);
+  // Auto-load results on success (via extracted hook)
+  useImageRequestResults({
+    viewer: cesium.viewer ?? undefined,
+    imageRequestStatus,
+    setImageRequestStatus,
+    resultsColor: resultsColor.value,
+    setShowCredsExpiredAlert,
+    addResource,
+    onFeatureClick
+  });
 
   const handleDistillationChange = (val: string) => {
     setFeatureDistillationAlgorithm(val);
@@ -279,7 +177,7 @@ const NewRequestModal = ({
       await new Promise((r) => setTimeout(r, 100));
       retryCount++;
     }
-    if (!cesium?.viewer) { console.error("Cesium viewer not initialized"); return; }
+    if (!cesium?.viewer) { logger.error("Cesium viewer not initialized"); return; }
 
     await runModelOnImage(
       jobId, s3Uri, imageReadRole, modelValue, modelInvokeModeValue, modelInvokeRole,
@@ -336,8 +234,7 @@ const NewRequestModal = ({
               value={bucketValue}
               onChange={(val) => {
                 setBucketValue(val);
-                setS3Objects([]);
-                setImageStatus("pending");
+                resetObjects();
                 if (val) loadS3Objects(val);
               }}
               options={s3Buckets}

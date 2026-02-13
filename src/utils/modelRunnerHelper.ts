@@ -1,5 +1,6 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
+import React from "react";
 import {
   GetQueueUrlCommand,
   ReceiveMessageCommand,
@@ -10,6 +11,7 @@ import {
 import {
   getAccountId,
   getAWSCreds,
+  JOB_NAME_PREFIX,
   KINESIS_RESULTS_STREAM_PREFIX,
   MONITOR_IMAGE_STATUS_INTERVAL_SECONDS,
   MONITOR_IMAGE_STATUS_RETRIES,
@@ -18,21 +20,28 @@ import {
   SQS_IMAGE_REQUEST_QUEUE,
   SQS_IMAGE_STATUS_QUEUE
 } from "@/config";
+import type {
+  FeatureDistillationConfig,
+  ImageProcessor,
+  ImageRequestOutput,
+  ImageRequestState,
+  PostProcessingStep
+} from "@/types";
+import { logger } from "@/utils/logger";
 
 export interface ImageRequest {
   jobId: string;
   jobName: string;
   imageUrls: string[];
-  outputs: any[];
-  imageProcessor: any;
-  imageProcessorParameters?: any;
-  postProcessing: any[];
+  outputs: ImageRequestOutput[];
+  imageProcessor: ImageProcessor;
+  imageProcessorParameters?: { CustomAttributes: string };
+  postProcessing: PostProcessingStep[];
   imageProcessorTileSize?: number;
   imageProcessorTileOverlap?: number;
   imageProcessorTileFormat?: string;
   imageProcessorTileCompression?: string;
   imageReadRole?: string;
-  featureSelectionOptions?: any;
   regionOfInterest?: string;
   featureProperties?: string;
 }
@@ -48,7 +57,7 @@ export async function runModelOnImage(
   modelValue: string,
   modelInvokeModeValue: string,
   modelInvokeRole: string,
-  selectedOutputs: any,
+  selectedOutputs: { label: string; value: string }[],
   tileSizeValue: number,
   tileOverlapValue: number,
   formatValue: string,
@@ -60,9 +69,9 @@ export async function runModelOnImage(
   roiWkt: string,
   featureProperties: string,
   textPrompt: string,
-  imageRequestStatus: any,
-  setImageRequestStatus: any,
-  setShowCredsExpiredAlert: any
+  imageRequestStatus: ImageRequestState,
+  setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>,
+  setShowCredsExpiredAlert: (show: boolean) => void
 ): Promise<void> {
   setImageRequestStatus({ state: "loading", data: {} });
   const imageProcessingRequest = await buildImageProcessingRequest(
@@ -109,9 +118,9 @@ export async function runModelOnImage(
 
 async function monitorJobStatus(
   imageId: string,
-  setImageRequestStatus: any,
-  resultData: any,
-  setShowCredsExpiredAlert: any
+  setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>,
+  resultData: { outputs: ImageRequestOutput[]; jobId: string; jobName: string },
+  setShowCredsExpiredAlert: (show: boolean) => void
 ): Promise<boolean> {
   let done: boolean = false;
   try {
@@ -124,7 +133,7 @@ async function monitorJobStatus(
     });
     const getUrlResponse = await sqsClient.send(getUrlCommand);
     const queueUrl = getUrlResponse.QueueUrl;
-    console.log("Listening to SQS ImageStatusQueue for progress updates...");
+    logger.info("Listening to SQS ImageStatusQueue for progress updates...");
 
     while (!done && maxRetries > 0) {
       const messagesResponse = await sqsClient.send(
@@ -144,9 +153,7 @@ async function monitorJobStatus(
               messageImageId == imageId
             ) {
               setImageRequestStatus({ state: "in-progress", data: {} });
-              console.log(
-                "\tIN_PROGRESS message found! Waiting for SUCCESS message..."
-              );
+              logger.info("IN_PROGRESS message found! Waiting for SUCCESS message...");
             } else if (
               messageImageStatus == "SUCCESS" &&
               messageImageId == imageId
@@ -161,9 +168,7 @@ async function monitorJobStatus(
                   processingDuration: processingDuration
                 }
               });
-              console.log(
-                `\tSUCCESS message found!  Image took ${processingDuration} seconds to process`
-              );
+              logger.info(`SUCCESS message found! Image took ${processingDuration} seconds to process`);
               done = true;
             } else if (
               messageImageStatus == "FAILED" &&
@@ -171,7 +176,7 @@ async function monitorJobStatus(
             ) {
               const failureMessage = JSON.parse(message.Body).Message;
               setImageRequestStatus({ state: "error", data: {} });
-              console.log(`Failed to process image. ${failureMessage}`);
+              logger.error(`Failed to process image. ${failureMessage}`);
               done = true;
             } else if (
               messageImageStatus == "PARTIAL" &&
@@ -179,7 +184,7 @@ async function monitorJobStatus(
             ) {
               const failureMessage = JSON.parse(message.Body).Message;
               setImageRequestStatus({ state: "warning", data: {} });
-              console.log(`Image processed with errors. ${failureMessage}`);
+              logger.warn(`Image processed with errors. ${failureMessage}`);
               done = true;
             }
           }
@@ -190,11 +195,11 @@ async function monitorJobStatus(
       }
     }
     if (!done) {
-      console.log(`Maximum retries reached waiting for ${imageId}`);
+      logger.warn(`Maximum retries reached waiting for ${imageId}`);
     }
     return done;
-  } catch (e: any) {
-    if (e.code === "ExpiredToken") {
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "ExpiredToken") {
       setShowCredsExpiredAlert(true);
     } else {
       throw e;
@@ -205,7 +210,7 @@ async function monitorJobStatus(
 
 async function queueImageProcessingJob(
   imageProcessingRequest: ImageRequest,
-  setShowCredsExpiredAlert: any
+  setShowCredsExpiredAlert: (show: boolean) => void
 ): Promise<void> {
   try {
     const sqsClient = getSQSClient();
@@ -220,11 +225,9 @@ async function queueImageProcessingJob(
     };
     const sendMessageCommand = new SendMessageCommand(input);
     const sendMessageResponse = await sqsClient.send(sendMessageCommand);
-    console.log(
-      `Message queued to SQS with messageId=${sendMessageResponse.MessageId}`
-    );
-  } catch (e: any) {
-    if (e.code === "ExpiredToken") {
+    logger.info(`Message queued to SQS with messageId=${sendMessageResponse.MessageId}`);
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === "ExpiredToken") {
       setShowCredsExpiredAlert(true);
     } else {
       throw e;
@@ -237,7 +240,7 @@ function build_feature_distillation_obj(
   featureDistillationIouThreshold: number,
   featureDistillationSkipBoxThreshold: number,
   featureDistillationSigma: number
-): object {
+): FeatureDistillationConfig {
   if (featureDistillationAlgorithm === "NMS") {
     return {
       algorithmType: featureDistillationAlgorithm,
@@ -267,7 +270,7 @@ async function buildImageProcessingRequest(
   modelValue: string,
   modelInvokeModeValue: string,
   modelInvocationRole: string,
-  selectedOutputs: any,
+  selectedOutputs: { label: string; value: string }[],
   tileSizeValue: number,
   tileOverlapValue: number,
   formatValue: string,
@@ -280,24 +283,24 @@ async function buildImageProcessingRequest(
   featureProperties: string,
   textPrompt: string
 ): Promise<ImageRequest> {
-  const jobName: string = `test_${jobId}`;
+  const jobName: string = `${JOB_NAME_PREFIX}${jobId}`;
   const accountId = await getAccountId();
   const resultStream = `${KINESIS_RESULTS_STREAM_PREFIX}-${accountId}`;
   const resultBucket = `${S3_RESULTS_BUCKET_PREFIX}-${accountId}`;
-  const processor = {
+  const processor: ImageProcessor = {
     name: modelValue,
     type: modelInvokeModeValue,
     assumedRole: modelInvocationRole
   };
-  const outputList: any[] = [];
-  selectedOutputs.forEach((selectedOutput: any) => {
-    if (selectedOutput.value == "S3") {
+  const outputList: ImageRequestOutput[] = [];
+  selectedOutputs.forEach((selectedOutput) => {
+    if (selectedOutput.value === "S3") {
       outputList.push({
         type: "S3",
         bucket: resultBucket,
         prefix: `${jobName}/`
       });
-    } else if (selectedOutput.value == "Kinesis") {
+    } else if (selectedOutput.value === "Kinesis") {
       outputList.push({
         type: "Kinesis",
         stream: resultStream,
@@ -305,10 +308,10 @@ async function buildImageProcessingRequest(
       });
     }
   });
-  console.log(`Starting ModelRunner image job in ${REGION}`);
-  console.log(`Image: ${s3Uri}`);
-  console.log(`Model: ${modelValue}`);
-  console.log(`Creating request job_id=${jobId}`);
+  logger.info(`Starting ModelRunner image job in ${REGION}`);
+  logger.info(`Image: ${s3Uri}`);
+  logger.info(`Model: ${modelValue}`);
+  logger.info(`Creating request job_id=${jobId}`);
   const imageRequest: ImageRequest = {
     jobId: jobId,
     jobName: jobName,
@@ -349,6 +352,6 @@ async function buildImageProcessingRequest(
   if (featureProperties.length > 0) {
     imageRequest.featureProperties = featureProperties;
   }
-  console.log(imageRequest);
+  logger.debug("Image request payload", imageRequest);
   return imageRequest;
 }

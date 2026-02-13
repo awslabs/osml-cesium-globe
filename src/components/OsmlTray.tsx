@@ -4,13 +4,11 @@ import React from "react";
 
 import OsmlMenu from "@/components/OsmlMenu";
 import type { FeaturePopupData } from "@/components/FeaturePopup";
+import type { ImageRequestState } from "@/types";
 
 interface OsmlTrayProps {
-  imageRequestStatus: {
-    state: string;
-    data: Record<string, any>;
-  };
-  setImageRequestStatus: (status: { state: string; data: Record<string, any> }) => void;
+  imageRequestStatus: ImageRequestState;
+  setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>;
   onFeatureClick?: (data: FeaturePopupData | null) => void;
 }
 

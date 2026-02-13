@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-sagemaker";
 
 import { getAWSCreds, isCredentialError, REGION } from "@/config";
+import { logger } from "@/utils/logger";
 
 /**
  * Retrieves a list of all SageMaker endpoints
@@ -27,7 +28,7 @@ export async function getListOfSMEndpoints(
       await client.send(new ListEndpointsCommand({}));
 
     if (!endpointObjectList || endpointObjectList.length === 0) {
-      console.error("Your account does not contain any SageMaker endpoints.");
+      logger.warn("Your account does not contain any SageMaker endpoints.");
       return;
     }
 
@@ -35,7 +36,7 @@ export async function getListOfSMEndpoints(
       (endpoint: EndpointSummary) => endpoint.EndpointName
     );
   } catch (e: unknown) {
-    console.error("Failed to list SageMaker endpoints:", e);
+    logger.error("Failed to list SageMaker endpoints:", e);
     if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
     }

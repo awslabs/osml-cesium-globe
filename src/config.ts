@@ -233,3 +233,23 @@ export const ZOOM_MIN: number = 7;
 // sqs retry
 export const MONITOR_IMAGE_STATUS_RETRIES: number = 1000;
 export const MONITOR_IMAGE_STATUS_INTERVAL_SECONDS: number = 5;
+
+// viewer initialization retry
+export const VIEWER_INIT_MAX_RETRIES: number = 20;
+export const VIEWER_INIT_RETRY_DELAY_MS: number = 200;
+
+// camera animation
+export const CAMERA_FLY_DURATION_SECONDS: number = 2.0;
+export const CAMERA_FLY_DELAY_MS: number = 1000;
+
+// feature popup dimensions
+export const POPUP_WIDTH: number = 320;
+export const POPUP_MAX_HEIGHT: number = 360;
+export const POPUP_MARGIN: number = 12;
+export const POPUP_VERTICAL_OFFSET: number = 30;
+
+// job naming
+export const JOB_NAME_PREFIX: string = "test_";
+
+// fallback dev server URL (used when window.location.origin is unavailable)
+export const FALLBACK_DEV_URL: string = "http://localhost:5173";

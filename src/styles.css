@@ -1,5 +1,52 @@
 /* Copyright 2023-2026 Amazon.com, Inc. or its affiliates. */
 
+/* ==============================
+   CSS Custom Properties
+   Centralized design tokens for
+   z-index layering and shared
+   scrollbar styling.
+   ============================== */
+:root {
+    /* z-index layering scale */
+    --z-vignette: 1;
+    --z-tray: 1000;
+    --z-popup: 1100;
+    --z-modal: 2000;
+    --z-dropdown: 3000;
+
+    /* scrollbar */
+    --scrollbar-width: 4px;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+    --scrollbar-track: transparent;
+}
+
+/* ==============================
+   Shared Dark Scrollbar
+   Apply to any scrollable container.
+   ============================== */
+.dark-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.dark-scroll::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+}
+
+.dark-scroll::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.dark-scroll::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 2px;
+}
+
+.dark-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
 .cesium-viewer .cesium-widget-credits {
     display: none;
 }
@@ -14,7 +61,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 1;
+    z-index: var(--z-vignette);
     background: radial-gradient(
         ellipse at center,
         transparent 55%,
@@ -26,13 +73,13 @@
     position: absolute;
     top: 20px;
     left: 20px;
-    z-index: 1000;
+    z-index: var(--z-tray);
 }
 
 .status-display {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    z-index: 1000;
+    z-index: var(--z-tray);
     max-width: 380px;
 }

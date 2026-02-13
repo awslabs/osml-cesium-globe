@@ -12,6 +12,7 @@ import Logo from "@/components/Logo";
 import FeaturePopup, { type FeaturePopupData } from "@/components/FeaturePopup";
 import ConfigWarnings from "@/components/alert/ConfigWarnings";
 import { ResourceProvider } from "@/context/ResourceContext";
+import type { ImageRequestState } from "@/types";
 
 /** Natural Earth II fallback (offline, bundled with Cesium) */
 function naturalEarthLayer(): Cesium.ImageryLayer {
@@ -35,7 +36,7 @@ async function resolveBaseLayer(): Promise<Cesium.ImageryLayer> {
 }
 
 const App = () => {
-  const [imageRequestStatus, setImageRequestStatus] = useState({
+  const [imageRequestStatus, setImageRequestStatus] = useState<ImageRequestState>({
     state: "idle",
     data: {}
   });

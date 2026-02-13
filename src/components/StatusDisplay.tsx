@@ -3,13 +3,11 @@
 import React from "react";
 
 import ImageRequestStatus from "@/components/ImageRequestStatus";
+import type { ImageRequestState } from "@/types";
 
 interface StatusDisplayProps {
-  imageRequestStatus: {
-    state: string;
-    data: Record<string, any>;
-  };
-  setImageRequestStatus: (status: { state: string; data: Record<string, any> }) => void;
+  imageRequestStatus: ImageRequestState;
+  setImageRequestStatus: (status: ImageRequestState) => void;
 }
 
 const StatusDisplay = ({ imageRequestStatus, setImageRequestStatus }: StatusDisplayProps) => {

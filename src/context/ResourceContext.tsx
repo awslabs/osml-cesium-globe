@@ -4,6 +4,9 @@ import * as Cesium from "cesium";
 import { GeoJsonDataSource, ImageryLayer, Viewer } from "cesium";
 import React, { createContext, useCallback, useContext, useState } from "react";
 
+import { CAMERA_FLY_DURATION_SECONDS } from "@/config";
+import { logger } from "@/utils/logger";
+
 export interface FeatureCollectionResource {
   id: string;
   name: string;
@@ -66,7 +69,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
       } catch (error) {
-        console.error("Error removing resource:", error);
+        logger.error("Error removing resource:", error);
       }
 
       return prev.filter((r) => r.id !== id);
@@ -89,7 +92,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             img.imageryLayer.show = newVisible;
           }
         } catch (error) {
-          console.error("Error toggling visibility:", error);
+          logger.error("Error toggling visibility:", error);
         }
 
         return { ...r, visible: newVisible };
@@ -98,27 +101,32 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const zoomTo = useCallback((id: string, viewer: Viewer) => {
-    const resource = resources.find((r) => r.id === id);
-    if (!resource) return;
+    // Use the state setter pattern to avoid stale closure over resources
+    setResources((prev) => {
+      const resource = prev.find((r) => r.id === id);
+      if (!resource) return prev;
 
-    try {
-      if (resource.type === "feature-collection") {
-        const fc = resource as FeatureCollectionResource;
-        viewer.zoomTo(fc.dataSource);
-      } else if (resource.type === "imagery") {
-        const img = resource as ImageryResource;
-        const rectangle = img.imageryLayer.imageryProvider.rectangle;
-        if (rectangle) {
-          viewer.camera.flyTo({
-            destination: rectangle,
-            duration: 2.0
-          });
+      try {
+        if (resource.type === "feature-collection") {
+          const fc = resource as FeatureCollectionResource;
+          viewer.zoomTo(fc.dataSource);
+        } else if (resource.type === "imagery") {
+          const img = resource as ImageryResource;
+          const rectangle = img.imageryLayer.imageryProvider.rectangle;
+          if (rectangle) {
+            viewer.camera.flyTo({
+              destination: rectangle,
+              duration: CAMERA_FLY_DURATION_SECONDS
+            });
+          }
         }
+      } catch (error) {
+        logger.error("Error zooming to resource:", error);
       }
-    } catch (error) {
-      console.error("Error zooming to resource:", error);
-    }
-  }, [resources]);
+
+      return prev; // Don't modify state, just read it
+    });
+  }, []);
 
   const clearAll = useCallback((viewer: Viewer) => {
     setResources((prev) => {
@@ -136,7 +144,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           }
         } catch (error) {
-          console.error("Error clearing resource:", error);
+          logger.error("Error clearing resource:", error);
         }
       }
 
