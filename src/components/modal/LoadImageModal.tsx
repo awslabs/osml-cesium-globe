@@ -1,19 +1,19 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import fs from "fs";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { CesiumContext } from "resium";
 import * as uuid from "uuid";
 
 import { LOCAL_IMAGE_DATA_FOLDER } from "@/config";
 import { useResources } from "@/context/ResourceContext";
-import { convertImageToCesium, loadImageInCesium } from "@/util/cesiumHelper";
-import { getListOfS3Buckets, getListOfS3Objects } from "@/util/s3Helper";
+import { useS3Browser } from "@/hooks/useS3Browser";
+import { convertImageToCesium, loadImageInCesium } from "@/utils/cesiumHelper";
+import { logger } from "@/utils/logger";
 
 import {
   DarkAutosuggest,
-  DarkFormField,
-  type LoadingStatus
+  DarkFormField
 } from "../ui/FormControls";
 import DarkModal from "./DarkModal";
 
@@ -43,11 +43,19 @@ const LoadImageModal = ({
   const [s3Object, setS3Object] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // S3 loading state
-  const [bucketStatus, setBucketStatus] = useState<LoadingStatus>("pending");
-  const [imageStatus, setImageStatus] = useState<LoadingStatus>("pending");
-  const [s3Buckets, setS3Buckets] = useState<{ value: string }[]>([]);
-  const [s3Objects, setS3Objects] = useState<{ value: string }[]>([]);
+  // S3 bucket/object browsing via shared hook
+  const {
+    buckets: s3Buckets,
+    bucketStatus,
+    objects: s3Objects,
+    objectStatus: imageStatus,
+    loadObjects: loadS3Objects,
+    resetObjects
+  } = useS3Browser({
+    enabled: showLoadImageModal,
+    setShowCredsExpiredAlert,
+    objectFilter: (key) => isImageFile(key)
+  });
 
   // Local file list
   const fileList = fs
@@ -57,46 +65,6 @@ const LoadImageModal = ({
       return stat.isFile() && isImageFile(file);
     });
   const localFileList = fileList.map((file) => ({ value: file }));
-
-  // Load S3 buckets
-  useEffect(() => {
-    if (!showLoadImageModal) return;
-    (async () => {
-      try {
-        setBucketStatus("loading");
-        const res = await getListOfS3Buckets(setShowCredsExpiredAlert);
-        if (res && res.length > 0) {
-          setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
-          setBucketStatus("finished");
-        } else {
-          setBucketStatus("error");
-        }
-      } catch (e) {
-        console.error("Error loading S3 buckets:", e);
-        setBucketStatus("error");
-      }
-    })();
-  }, [showLoadImageModal, showCredsExpiredAlert]);
-
-  const loadS3Objects = async (bucket: string) => {
-    try {
-      setImageStatus("loading");
-      const res = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
-      if (res && Array.isArray(res) && res.length > 0) {
-        const imageFiles = res
-          .map((o: any) => o["Key"])
-          .filter((k: string) => isImageFile(k))
-          .map((k: string) => ({ value: k }));
-        setS3Objects(imageFiles);
-        setImageStatus("finished");
-      } else {
-        setImageStatus("error");
-      }
-    } catch (e) {
-      console.error("Error loading S3 objects:", e);
-      setImageStatus("error");
-    }
-  };
 
   const handleDismiss = () => {
     if (!isLoading) {
@@ -120,7 +88,7 @@ const LoadImageModal = ({
         setShowCredsExpiredAlert
       )
         .then((imageryLayer) => {
-          console.log(`Successfully loaded local image: ${localFile}!`);
+          logger.info(`Successfully loaded local image: ${localFile}`);
           if (imageryLayer) {
             addResource({
               id: uuid.v4(),
@@ -138,7 +106,7 @@ const LoadImageModal = ({
           setIsLoading(false);
         })
         .catch((error) => {
-          console.error("Error loading local image:", error);
+          logger.error("Error loading local image:", error);
           setIsLoading(false);
         });
     } else if (activeTab === "s3" && s3Bucket && s3Object && cesium?.viewer) {
@@ -152,7 +120,7 @@ const LoadImageModal = ({
         setShowCredsExpiredAlert
       )
         .then((imageryLayer) => {
-          console.log(`Successfully loaded S3 image: ${s3Object}!`);
+          logger.info(`Successfully loaded S3 image: ${s3Object}`);
           if (imageryLayer) {
             addResource({
               id: uuid.v4(),
@@ -171,7 +139,7 @@ const LoadImageModal = ({
           setIsLoading(false);
         })
         .catch((error) => {
-          console.error("Error loading S3 image:", error);
+          logger.error("Error loading S3 image:", error);
           setIsLoading(false);
         });
     }
@@ -239,8 +207,7 @@ const LoadImageModal = ({
                 value={s3Bucket}
                 onChange={(val) => {
                   setS3Bucket(val);
-                  setS3Objects([]);
-                  setImageStatus("pending");
+                  resetObjects();
                   if (val) loadS3Objects(val);
                 }}
                 options={s3Buckets}

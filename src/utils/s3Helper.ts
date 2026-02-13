@@ -13,6 +13,7 @@ import {
 } from "@aws-sdk/client-s3";
 
 import { getAWSCreds, isCredentialError, REGION } from "@/config";
+import { logger } from "@/utils/logger";
 
 const s3Client: S3Client = new S3Client({
   region: REGION,
@@ -46,15 +47,13 @@ export async function getListOfS3Buckets(
         });
         return s3BucketsList;
       } else {
-        console.error("Your S3 account does not contain any buckets.");
+        logger.warn("Your S3 account does not contain any buckets.");
       }
     } else {
-      console.error(
-        "Cannot fetch buckets from S3. Please verify your roles/permissions."
-      );
+      logger.error("Cannot fetch buckets from S3. Please verify your roles/permissions.");
     }
   } catch (e: unknown) {
-    console.error("Failed to list S3 buckets:", e);
+    logger.error("Failed to list S3 buckets:", e);
     if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
     }
@@ -82,10 +81,10 @@ export async function getListOfS3Objects(
     if (s3ObjectsList) {
       return s3ObjectsList;
     } else {
-      console.error("Cannot fetch S3 Objects from this bucket: " + bucketName);
+      logger.warn("Cannot fetch S3 Objects from this bucket: " + bucketName);
     }
   } catch (e: unknown) {
-    console.error(`Failed to list objects in bucket "${bucketName}":`, e);
+    logger.error(`Failed to list objects in bucket "${bucketName}":`, e);
     if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
     }
@@ -131,7 +130,7 @@ export async function loadS3Object(
       }
     }
   } catch (e: unknown) {
-    console.error(`Failed to load S3 object "${s3Object.name}":`, e);
+    logger.error(`Failed to load S3 object "${s3Object.name}":`, e);
     if (isCredentialError(e)) {
       setShowCredsExpiredAlert(true);
     }

@@ -1,14 +1,14 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import React, { useEffect, useState } from "react";
+
+import type { ImageRequestData, ImageRequestState } from "@/types";
+
 import "./ImageRequestStatus.css";
 
 interface ImageRequestStatusProps {
-  imageRequestStatus: {
-    state: string;
-    data: Record<string, any>;
-  };
-  setImageRequestStatus: (status: { state: string; data: Record<string, any> }) => void;
+  imageRequestStatus: ImageRequestState;
+  setImageRequestStatus: (status: ImageRequestState) => void;
 }
 
 type StatusType = "info" | "success" | "error" | "warning";
@@ -16,7 +16,7 @@ type StatusType = "info" | "success" | "error" | "warning";
 interface StatusConfig {
   type: StatusType;
   title: string;
-  message: string | ((data: Record<string, any>) => string);
+  message: string | ((data: ImageRequestData) => string);
   accentColor: string;
   iconColor: string;
 }
@@ -46,7 +46,7 @@ const statusMessages: Record<string, StatusConfig> = {
   success: {
     type: "success",
     title: "Success",
-    message: (data: Record<string, any>) =>
+    message: (data: ImageRequestData) =>
       `Detected ${data.featureCount || 0} features in ${data.processingDuration || 0}s.`,
     accentColor: "rgba(52, 211, 153, 0.3)",
     iconColor: "#34d399"

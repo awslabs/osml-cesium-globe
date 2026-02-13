@@ -1,19 +1,19 @@
 // Copyright 2023-2026 Amazon.com, Inc. or its affiliates.
 
 import fs from "fs";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { CesiumContext } from "resium";
 import * as uuid from "uuid";
 
 import { DEFAULT_RESULTS_COLOR_OPTION, LOCAL_GEOJSON_FOLDER } from "@/config";
 import { useResources } from "@/context/ResourceContext";
-import { loadGeoJson, loadS3GeoJson, type FeaturePopupCallback } from "@/util/cesiumHelper";
-import { getListOfS3Buckets, getListOfS3Objects } from "@/util/s3Helper";
+import { useS3Browser } from "@/hooks/useS3Browser";
+import { loadGeoJson, loadS3GeoJson, type FeaturePopupCallback } from "@/utils/cesiumHelper";
+import { logger } from "@/utils/logger";
 
 import {
   DarkAutosuggest,
-  DarkFormField,
-  type LoadingStatus
+  DarkFormField
 } from "../ui/FormControls";
 import DarkModal from "./DarkModal";
 
@@ -24,10 +24,10 @@ const LoadDataModal = ({
   setShowCredsExpiredAlert,
   onFeatureClick
 }: {
-  showLoadDataModal: any;
-  setShowLoadDataModal: any;
-  showCredsExpiredAlert: any;
-  setShowCredsExpiredAlert: any;
+  showLoadDataModal: boolean;
+  setShowLoadDataModal: (show: boolean) => void;
+  showCredsExpiredAlert: boolean;
+  setShowCredsExpiredAlert: (show: boolean) => void;
   onFeatureClick?: FeaturePopupCallback;
 }) => {
   const cesium = useContext(CesiumContext);
@@ -38,11 +38,19 @@ const LoadDataModal = ({
   const [s3Bucket, setS3Bucket] = useState("");
   const [s3Object, setS3Object] = useState("");
 
-  // S3 loading state
-  const [bucketStatus, setBucketStatus] = useState<LoadingStatus>("pending");
-  const [geojsonStatus, setGeojsonStatus] = useState<LoadingStatus>("pending");
-  const [s3Buckets, setS3Buckets] = useState<{ value: string }[]>([]);
-  const [s3Objects, setS3Objects] = useState<{ value: string }[]>([]);
+  // S3 bucket/object browsing via shared hook
+  const {
+    buckets: s3Buckets,
+    bucketStatus,
+    objects: s3Objects,
+    objectStatus: geojsonStatus,
+    loadObjects: loadS3Objects,
+    resetObjects
+  } = useS3Browser({
+    enabled: showLoadDataModal,
+    setShowCredsExpiredAlert,
+    objectFilter: (key) => key.endsWith(".geojson") || key.endsWith(".json")
+  });
 
   // Local file list
   const fileList = fs
@@ -52,46 +60,6 @@ const LoadDataModal = ({
       return stat.isFile() && (file.endsWith(".geojson") || file.endsWith(".json"));
     });
   const localFileList = fileList.map((file) => ({ value: file }));
-
-  // Load S3 buckets
-  useEffect(() => {
-    if (!showLoadDataModal) return;
-    (async () => {
-      try {
-        setBucketStatus("loading");
-        const res = await getListOfS3Buckets(setShowCredsExpiredAlert);
-        if (res && res.length > 0) {
-          setS3Buckets(res.map((b: any) => ({ value: b["Name"] })));
-          setBucketStatus("finished");
-        } else {
-          setBucketStatus("error");
-        }
-      } catch (e) {
-        console.error("Error loading S3 buckets:", e);
-        setBucketStatus("error");
-      }
-    })();
-  }, [showLoadDataModal, showCredsExpiredAlert]);
-
-  const loadS3Objects = async (bucket: string) => {
-    try {
-      setGeojsonStatus("loading");
-      const res = await getListOfS3Objects(bucket, setShowCredsExpiredAlert);
-      if (res && Array.isArray(res) && res.length > 0) {
-        const geojsonFiles = res
-          .map((o: any) => o["Key"])
-          .filter((k: string) => k.endsWith(".geojson") || k.endsWith(".json"))
-          .map((k: string) => ({ value: k }));
-        setS3Objects(geojsonFiles);
-        setGeojsonStatus("finished");
-      } else {
-        setGeojsonStatus("error");
-      }
-    } catch (e) {
-      console.error("Error loading S3 objects:", e);
-      setGeojsonStatus("error");
-    }
-  };
 
   const handleDismiss = () => {
     setShowLoadDataModal(false);
@@ -112,7 +80,7 @@ const LoadDataModal = ({
           setShowCredsExpiredAlert,
           onFeatureClick
         ).then((result) => {
-          console.log(`Successfully loaded ${s3Object}!`);
+          logger.info(`Successfully loaded ${s3Object}`);
           addResource({
             id: uuid.v4(),
             name: objectName.replace(/\.(geojson|json)$/i, ""),
@@ -139,7 +107,7 @@ const LoadDataModal = ({
           DEFAULT_RESULTS_COLOR_OPTION.value,
           onFeatureClick
         ).then((result) => {
-          console.log(`Successfully loaded ${localFile}!`);
+          logger.info(`Successfully loaded ${localFile}`);
           addResource({
             id: uuid.v4(),
             name: jobId,
@@ -200,8 +168,7 @@ const LoadDataModal = ({
                 value={s3Bucket}
                 onChange={(val) => {
                   setS3Bucket(val);
-                  setS3Objects([]);
-                  setGeojsonStatus("pending");
+                  resetObjects();
                   if (val) loadS3Objects(val);
                 }}
                 options={s3Buckets}

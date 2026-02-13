@@ -4,6 +4,8 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import { CesiumContext } from "resium";
 import * as Cesium from "cesium";
 
+import { POPUP_MARGIN, POPUP_MAX_HEIGHT, POPUP_VERTICAL_OFFSET, POPUP_WIDTH } from "@/config";
+
 import "./FeaturePopup.css";
 
 /** A single key-value entry in a property group */
@@ -172,25 +174,22 @@ const FeaturePopup: React.FC<FeaturePopupProps> = ({ data, onClose }) => {
     "Feature";
 
   // Clamp popup to viewport bounds
-  const popupWidth = 320;
-  const popupMaxHeight = 360;
-  const margin = 12;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  let left = screenPos.x - popupWidth / 2;
-  let top = screenPos.y - popupMaxHeight - 30; // above the point
+  let left = screenPos.x - POPUP_WIDTH / 2;
+  let top = screenPos.y - POPUP_MAX_HEIGHT - POPUP_VERTICAL_OFFSET; // above the point
 
   // If not enough room above, show below
-  if (top < margin) {
-    top = screenPos.y + 30;
+  if (top < POPUP_MARGIN) {
+    top = screenPos.y + POPUP_VERTICAL_OFFSET;
   }
   // Clamp horizontal
-  if (left < margin) left = margin;
-  if (left + popupWidth > vw - margin) left = vw - margin - popupWidth;
+  if (left < POPUP_MARGIN) left = POPUP_MARGIN;
+  if (left + POPUP_WIDTH > vw - POPUP_MARGIN) left = vw - POPUP_MARGIN - POPUP_WIDTH;
   // Clamp vertical
-  if (top + popupMaxHeight > vh - margin) {
-    top = vh - margin - popupMaxHeight;
+  if (top + POPUP_MAX_HEIGHT > vh - POPUP_MARGIN) {
+    top = vh - POPUP_MARGIN - POPUP_MAX_HEIGHT;
   }
 
   return (
