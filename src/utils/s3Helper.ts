@@ -19,6 +19,7 @@ import { logger } from "@/utils/logger";
 
 const s3Client: S3Client = new S3Client({
   region: REGION,
+  followRegionRedirects: true,
   credentials: () => {
     const creds = getAWSCreds();
     if (!creds) return Promise.reject(new Error("No AWS credentials found"));
