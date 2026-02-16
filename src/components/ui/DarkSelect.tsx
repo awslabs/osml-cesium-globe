@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type { LabeledOption } from "./types";
 
@@ -32,11 +33,49 @@ export const DarkSelect: React.FC<DarkSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [dropdownMaxHeight, setDropdownMaxHeight] = useState(220);
+  const [openUpward, setOpenUpward] = useState(false);
+
+  /** Positions the dropdown to avoid clipping in scrollable containers. */
+  const updateDropdownPosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spacing = 4;
+    const maxHeight = 220;
+    const minHeight = 120;
+    const viewportPadding = 8;
+    const spaceAbove = rect.top - spacing - viewportPadding;
+    const spaceBelow = window.innerHeight - rect.bottom - spacing - viewportPadding;
+
+    const shouldOpenUpward = spaceBelow < minHeight && spaceAbove > spaceBelow;
+    const availableSpace = shouldOpenUpward ? spaceAbove : spaceBelow;
+    const computedMaxHeight = Math.max(
+      Math.min(maxHeight, availableSpace),
+      Math.min(minHeight, Math.max(spaceAbove, spaceBelow))
+    );
+
+    setOpenUpward(shouldOpenUpward);
+    setDropdownMaxHeight(computedMaxHeight);
+    setDropdownStyle({
+      position: "fixed",
+      left: rect.left,
+      width: rect.width,
+      zIndex: "var(--z-dropdown)",
+      top: shouldOpenUpward ? rect.top - spacing : rect.bottom + spacing,
+      transform: shouldOpenUpward ? "translateY(-100%)" : "none"
+    });
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const clickedInsideWrapper = !!wrapperRef.current?.contains(target);
+      const clickedInsideDropdown = !!dropdownRef.current?.contains(target);
+      if (!clickedInsideWrapper && !clickedInsideDropdown) {
         setIsOpen(false);
       }
     };
@@ -50,6 +89,18 @@ export const DarkSelect: React.FC<DarkSelectProps> = ({
       if (item) item.scrollIntoView({ block: "nearest" });
     }
   }, [highlightIdx]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updateDropdownPosition();
+    const handleViewportChange = () => updateDropdownPosition();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen) {
@@ -87,6 +138,7 @@ export const DarkSelect: React.FC<DarkSelectProps> = ({
     <div className="df-select" ref={wrapperRef}>
       <button
         type="button"
+        ref={triggerRef}
         className={`df-select-trigger ${disabled ? "df-input--disabled" : ""}`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
@@ -106,28 +158,34 @@ export const DarkSelect: React.FC<DarkSelectProps> = ({
         </svg>
       </button>
 
-      {isOpen && (
-        <div className="df-dropdown">
-          <ul className="df-dropdown-list" ref={listRef}>
-            {options.map((opt, i) => (
-              <li
-                key={opt.value}
-                className={`df-dropdown-item ${
-                  i === highlightIdx ? "df-dropdown-item--highlight" : ""
-                } ${value?.value === opt.value ? "df-dropdown-item--selected" : ""}`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onChange(opt);
-                  setIsOpen(false);
-                }}
-                onMouseEnter={() => setHighlightIdx(i)}
-              >
-                {renderOption ? renderOption(opt) : opt.label}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {isOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className={`df-dropdown df-dropdown--portal ${openUpward ? "df-dropdown--upward" : ""}`}
+            style={dropdownStyle}
+          >
+            <ul className="df-dropdown-list" ref={listRef} style={{ maxHeight: dropdownMaxHeight }}>
+              {options.map((opt, i) => (
+                <li
+                  key={opt.value}
+                  className={`df-dropdown-item ${
+                    i === highlightIdx ? "df-dropdown-item--highlight" : ""
+                  } ${value?.value === opt.value ? "df-dropdown-item--selected" : ""}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange(opt);
+                    setIsOpen(false);
+                  }}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                >
+                  {renderOption ? renderOption(opt) : opt.label}
+                </li>
+              ))}
+            </ul>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

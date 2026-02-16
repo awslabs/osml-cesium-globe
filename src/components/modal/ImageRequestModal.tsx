@@ -286,6 +286,12 @@ const NewRequestModal = ({
           </DarkFormField>
         </div>
 
+        <div className="dm-field">
+          <DarkFormField label="Text Prompt" description="Describe what to detect (for text-prompted models).">
+            <DarkInput value={textPrompt} onChange={setTextPrompt} placeholder="e.g., cars, buildings, vehicles" />
+          </DarkFormField>
+        </div>
+
         <ExpandSection title="Model Options">
           <div className="dm-field">
             <DarkFormField label="Model Invoke Mode" description="How to invoke the model.">
@@ -426,11 +432,6 @@ const NewRequestModal = ({
           <div className="dm-field">
             <DarkFormField label="Feature Properties (JSON)" description="JSON array of additional properties.">
               <DarkInput value={featureProperties} onChange={setFeatureProperties} placeholder='[{"key": "value"}]' />
-            </DarkFormField>
-          </div>
-          <div className="dm-field">
-            <DarkFormField label="Text Prompt" description="Describe what to detect (for text-prompted models).">
-              <DarkInput value={textPrompt} onChange={setTextPrompt} placeholder="e.g., cars, buildings, vehicles" />
             </DarkFormField>
           </div>
           <div className="dm-field">
