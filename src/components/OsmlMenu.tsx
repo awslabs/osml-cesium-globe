@@ -34,7 +34,15 @@ const OsmlMenu: React.FC<OsmlMenuProps> = ({
   onFeatureClick
 }) => {
   const cesium = useContext(CesiumContext);
-  const { resources, removeResource, toggleVisibility, zoomTo, clearAll } = useResources();
+  const {
+    resources,
+    confidenceThreshold,
+    setConfidenceThreshold,
+    removeResource,
+    toggleVisibility,
+    zoomTo,
+    clearAll
+  } = useResources();
 
   const [isOpen, setIsOpen] = useState(false);
   const [showImageRequestModal, setShowImageRequestModal] = useState(false);
@@ -84,6 +92,8 @@ const OsmlMenu: React.FC<OsmlMenuProps> = ({
   const renderResourceItem = (resource: LoadedResource) => {
     const isFC = resource.type === "feature-collection";
     const fc = isFC ? (resource as FeatureCollectionResource) : null;
+    const filteredFeatureCount = fc?.filteredFeatureCount ?? fc?.featureCount ?? 0;
+    const isFiltered = filteredFeatureCount !== (fc?.featureCount ?? 0);
 
     return (
       <div
@@ -120,7 +130,9 @@ const OsmlMenu: React.FC<OsmlMenuProps> = ({
               )}
               {fc && (
                 <span className="op-layer-count">
-                  {fc.featureCount.toLocaleString()} feature{fc.featureCount !== 1 ? "s" : ""}
+                  {isFiltered
+                    ? `${filteredFeatureCount.toLocaleString()} / ${fc.featureCount.toLocaleString()} shown`
+                    : `${fc.featureCount.toLocaleString()} feature${fc.featureCount !== 1 ? "s" : ""}`}
                 </span>
               )}
               <span className="op-layer-time">{formatTime(resource.loadedAt)}</span>
@@ -269,6 +281,24 @@ const OsmlMenu: React.FC<OsmlMenuProps> = ({
               renderEmptyLayers()
             ) : (
               <>
+                {featureCollections.length > 0 && (
+                  <div className="op-confidence-filter">
+                    <div className="op-confidence-filter-header">
+                      <span className="op-confidence-filter-title">Minimum confidence</span>
+                      <span className="op-confidence-filter-value">{confidenceThreshold.toFixed(2)}</span>
+                    </div>
+                    <input
+                      className="op-confidence-filter-range"
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={confidenceThreshold}
+                      onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                    />
+                  </div>
+                )}
+
                 {/* Feature Collections */}
                 {featureCollections.length > 0 && (
                   <div className="op-layer-group">

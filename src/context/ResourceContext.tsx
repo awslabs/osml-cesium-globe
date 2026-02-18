@@ -9,6 +9,10 @@ import { GeoJsonDataSource, ImageryLayer, Viewer } from "cesium";
 import React, { createContext, useCallback, useContext, useState } from "react";
 
 import { CAMERA_FLY_DURATION_SECONDS } from "@/config";
+import {
+  applyConfidenceFilter,
+  clampConfidenceThreshold
+} from "@/utils/featureConfidence";
 import { logger } from "@/utils/logger";
 
 /** A loaded GeoJSON feature collection displayed on the Cesium globe. */
@@ -23,6 +27,8 @@ export interface FeatureCollectionResource {
   visible: boolean;
   loadedAt: Date;
   dataSource: GeoJsonDataSource;
+  filteredFeatureCount?: number;
+  confidenceThreshold?: number;
 }
 
 /** A loaded imagery layer displayed on the Cesium globe. */
@@ -42,6 +48,8 @@ export type LoadedResource = FeatureCollectionResource | ImageryResource;
 
 interface ResourceContextValue {
   resources: LoadedResource[];
+  confidenceThreshold: number;
+  setConfidenceThreshold: (threshold: number) => void;
   addResource: (resource: LoadedResource) => void;
   removeResource: (id: string, viewer: Viewer) => void;
   toggleVisibility: (id: string, viewer: Viewer) => void;
@@ -53,9 +61,50 @@ const ResourceContext = createContext<ResourceContextValue | undefined>(undefine
 
 export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [resources, setResources] = useState<LoadedResource[]>([]);
+  const [confidenceThreshold, setConfidenceThresholdState] = useState(0);
 
   const addResource = useCallback((resource: LoadedResource) => {
-    setResources((prev) => [...prev, resource]);
+    setResources((prev) => {
+      if (resource.type !== "feature-collection") {
+        return [...prev, resource];
+      }
+
+      const featureResource = resource as FeatureCollectionResource;
+      const filteredFeatureCount = applyConfidenceFilter(
+        featureResource.dataSource,
+        confidenceThreshold,
+        featureResource.visible
+      );
+      return [
+        ...prev,
+        {
+          ...featureResource,
+          filteredFeatureCount,
+          confidenceThreshold
+        }
+      ];
+    });
+  }, [confidenceThreshold]);
+
+  const setConfidenceThreshold = useCallback((threshold: number) => {
+    const clamped = clampConfidenceThreshold(threshold);
+    setConfidenceThresholdState(clamped);
+    setResources((prev) =>
+      prev.map((resource) => {
+        if (resource.type !== "feature-collection") return resource;
+        const featureResource = resource as FeatureCollectionResource;
+        const filteredFeatureCount = applyConfidenceFilter(
+          featureResource.dataSource,
+          clamped,
+          featureResource.visible
+        );
+        return {
+          ...featureResource,
+          confidenceThreshold: clamped,
+          filteredFeatureCount
+        };
+      })
+    );
   }, []);
 
   const removeResource = useCallback((id: string, viewer: Viewer) => {
@@ -93,7 +142,17 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         try {
           if (r.type === "feature-collection") {
             const fc = r as FeatureCollectionResource;
-            fc.dataSource.show = newVisible;
+            const filteredFeatureCount = applyConfidenceFilter(
+              fc.dataSource,
+              confidenceThreshold,
+              newVisible
+            );
+            return {
+              ...fc,
+              visible: newVisible,
+              confidenceThreshold,
+              filteredFeatureCount
+            };
           } else if (r.type === "imagery") {
             const img = r as ImageryResource;
             img.imageryLayer.show = newVisible;
@@ -105,7 +164,7 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return { ...r, visible: newVisible };
       })
     );
-  }, []);
+  }, [confidenceThreshold]);
 
   const zoomTo = useCallback((id: string, viewer: Viewer) => {
     // Use the state setter pattern to avoid stale closure over resources
@@ -169,7 +228,16 @@ export const ResourceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   return (
     <ResourceContext.Provider
-      value={{ resources, addResource, removeResource, toggleVisibility, zoomTo, clearAll }}
+      value={{
+        resources,
+        confidenceThreshold,
+        setConfidenceThreshold,
+        addResource,
+        removeResource,
+        toggleVisibility,
+        zoomTo,
+        clearAll
+      }}
     >
       {children}
     </ResourceContext.Provider>

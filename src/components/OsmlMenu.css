@@ -361,6 +361,43 @@
 }
 
 /* ==============================
+   Confidence Filter
+   ============================== */
+.op-confidence-filter {
+  margin: 2px 4px 10px;
+  padding: 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.op-confidence-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.op-confidence-filter-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.op-confidence-filter-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.op-confidence-filter-range {
+  width: 100%;
+  accent-color: #3b82f6;
+}
+
+/* ==============================
    Layer Group
    ============================== */
 .op-layer-group {
