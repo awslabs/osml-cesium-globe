@@ -7,12 +7,13 @@
  * isolate the result-loading side-effect into a testable unit.
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { FeatureCollectionResource, LoadedResource } from "@/context/ResourceContext";
 import type { ImageRequestOutput, ImageRequestState } from "@/types";
 import { loadS3GeoJson, type FeaturePopupCallback } from "@/utils/cesiumHelper";
+import { logger } from "@/utils/logger";
 
 /**
  * Loads GeoJSON results from S3 for each output and registers them as resources.
@@ -26,8 +27,11 @@ async function loadResults(
   setShowCredsExpiredAlert: (show: boolean) => void,
   setImageRequestStatus: React.Dispatch<React.SetStateAction<ImageRequestState>>,
   addResource?: (resource: LoadedResource) => void,
-  onFeatureClick?: FeaturePopupCallback
+  onFeatureClick?: FeaturePopupCallback,
+  imageName?: string,
+  modelName?: string
 ) {
+  const displayName = buildResultLayerName(imageName, modelName, jobName);
   let totalFeatures = 0;
   for (const output of outputs) {
     if (output.type === "S3") {
@@ -44,7 +48,7 @@ async function loadResults(
       if (addResource) {
         addResource({
           id: uuidv4(),
-          name: `${jobName} results`,
+          name: displayName,
           type: "feature-collection",
           source: "s3",
           sourceDetail: `${output.bucket}/${s3Object}`,
@@ -52,7 +56,8 @@ async function loadResults(
           color: resultsColor,
           visible: true,
           loadedAt: new Date(),
-          dataSource: result.dataSource
+          dataSource: result.dataSource,
+          imageName
         } as FeatureCollectionResource);
       }
     }
@@ -61,6 +66,19 @@ async function loadResults(
     ...prev,
     data: { ...prev.data, featureCount: totalFeatures }
   }));
+}
+
+/** Builds a human-readable layer name from the image, model, and job info. */
+function buildResultLayerName(
+  imageName?: string,
+  modelName?: string,
+  jobName?: string
+): string {
+  const parts: string[] = [];
+  if (imageName) parts.push(imageName);
+  if (modelName) parts.push(modelName);
+  if (parts.length === 0 && jobName) parts.push(jobName);
+  return parts.length > 0 ? `${parts.join(" / ")} results` : "results";
 }
 
 export interface UseImageRequestResultsOptions {
@@ -73,6 +91,8 @@ export interface UseImageRequestResultsOptions {
   resultsColor: string;
   setShowCredsExpiredAlert: (show: boolean) => void;
   addResource: (resource: LoadedResource) => void;
+  /** Current list of loaded resources, used to skip loading duplicates. */
+  resources: LoadedResource[];
   onFeatureClick?: FeaturePopupCallback;
 }
 
@@ -87,8 +107,11 @@ export function useImageRequestResults({
   resultsColor,
   setShowCredsExpiredAlert,
   addResource,
+  resources,
   onFeatureClick
 }: UseImageRequestResultsOptions): void {
+  const loadingRef = useRef(false);
+
   useEffect(() => {
     const getData = async (
       cesiumRef: { viewer: import("cesium").Viewer },
@@ -96,7 +119,22 @@ export function useImageRequestResults({
       jobName: string,
       jobId: string
     ) => {
-      if (!imageRequestStatus.data.featureCount) {
+      if (imageRequestStatus.data.featureCount != null) return;
+      if (loadingRef.current) return;
+
+      const incoming = imageRequestStatus.data.imageName;
+      if (incoming) {
+        const alreadyLoaded = resources.some(
+          (r) => r.type === "feature-collection" && (r as FeatureCollectionResource).imageName === incoming
+        );
+        if (alreadyLoaded) {
+          logger.info(`Skipping duplicate result load — layer for "${incoming}" already exists`);
+          return;
+        }
+      }
+
+      loadingRef.current = true;
+      try {
         await loadResults(
           cesiumRef,
           outputs,
@@ -106,8 +144,12 @@ export function useImageRequestResults({
           setShowCredsExpiredAlert,
           setImageRequestStatus,
           addResource,
-          onFeatureClick
+          onFeatureClick,
+          imageRequestStatus.data.imageName,
+          imageRequestStatus.data.modelName
         );
+      } finally {
+        loadingRef.current = false;
       }
     };
 
@@ -122,6 +164,7 @@ export function useImageRequestResults({
     setShowCredsExpiredAlert,
     setImageRequestStatus,
     addResource,
+    resources,
     onFeatureClick,
     imageRequestStatus.data
   ]);
