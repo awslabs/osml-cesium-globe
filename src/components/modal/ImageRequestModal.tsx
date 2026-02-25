@@ -75,7 +75,7 @@ const NewRequestModal = ({
   onFeatureClick?: FeaturePopupCallback;
 }) => {
   const cesium = useContext(CesiumContext);
-  const { addResource } = useResources();
+  const { addResource, resources } = useResources();
 
   // Form state
   const [bucketValue, setBucketValue] = useState("");
@@ -152,6 +152,7 @@ const NewRequestModal = ({
     resultsColor: resultsColor.value,
     setShowCredsExpiredAlert,
     addResource,
+    resources,
     onFeatureClick
   });
 
@@ -179,6 +180,12 @@ const NewRequestModal = ({
     }
     if (!cesium?.viewer) { logger.error("Cesium viewer not initialized"); return; }
 
+    const imageName = imageValue.split("/").pop()?.split(".")[0] || imageValue;
+    setImageRequestStatus((prev) => ({
+      ...prev,
+      data: { ...prev.data, imageName, modelName: modelValue }
+    }));
+
     await runModelOnImage(
       jobId, s3Uri, imageReadRole, modelValue, modelInvokeModeValue, modelInvokeRole,
       selectedOutputs, tileSizeValue, tileOverlapValue, formatValue, compressionValue,
@@ -188,16 +195,22 @@ const NewRequestModal = ({
       imageRequestStatus, setImageRequestStatus, setShowCredsExpiredAlert
     );
 
-    const imageryLayer = await loadImageInCesium(
-      { viewer: cesium.viewer as any }, bucketValue, imageValue, imageId, setShowCredsExpiredAlert
+    const imagerySourceDetail = `${bucketValue}/${imageValue}`;
+    const imageryAlreadyLoaded = resources.some(
+      (r) => r.type === "imagery" && r.sourceDetail === imagerySourceDetail
     );
-    if (imageryLayer) {
-      const imageName = imageValue.split("/").pop()?.split(".")[0] || "request-image";
-      addResource({
-        id: uuidv4(), name: imageName, type: "imagery", source: "s3",
-        sourceDetail: `${bucketValue}/${imageValue}`, visible: true,
-        loadedAt: new Date(), imageryLayer
-      } as ImageryResource);
+    if (!imageryAlreadyLoaded) {
+      const imageryLayer = await loadImageInCesium(
+        { viewer: cesium.viewer as any }, bucketValue, imageValue, imageId, setShowCredsExpiredAlert
+      );
+      if (imageryLayer) {
+        const imageName = imageValue.split("/").pop()?.split(".")[0] || "request-image";
+        addResource({
+          id: uuidv4(), name: imageName, type: "imagery", source: "s3",
+          sourceDetail: imagerySourceDetail, visible: true,
+          loadedAt: new Date(), imageryLayer
+        } as ImageryResource);
+      }
     }
   };
 
@@ -235,7 +248,7 @@ const NewRequestModal = ({
               onChange={(val) => {
                 setBucketValue(val);
                 resetObjects();
-                if (val) loadS3Objects(val);
+                if (val && s3Buckets.some((b) => b.value === val)) loadS3Objects(val);
               }}
               options={s3Buckets}
               placeholder="Select or type a bucket name"

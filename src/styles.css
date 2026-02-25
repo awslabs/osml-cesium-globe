@@ -83,3 +83,10 @@
     z-index: var(--z-tray);
     max-width: 380px;
 }
+
+.analytics-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: var(--z-tray);
+}

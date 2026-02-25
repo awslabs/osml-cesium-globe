@@ -58,6 +58,8 @@ export interface ImageRequestData {
   jobName?: string;
   processingDuration?: string;
   featureCount?: number;
+  imageName?: string;
+  modelName?: string;
 }
 
 /** Current state of an image processing request (used by App, modals, and status display). */

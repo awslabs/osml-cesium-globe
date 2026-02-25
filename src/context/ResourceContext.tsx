@@ -29,6 +29,8 @@ export interface FeatureCollectionResource {
   dataSource: GeoJsonDataSource;
   filteredFeatureCount?: number;
   confidenceThreshold?: number;
+  /** Original image name used to produce this result, for deduplication. */
+  imageName?: string;
 }
 
 /** A loaded imagery layer displayed on the Cesium globe. */

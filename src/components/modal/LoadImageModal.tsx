@@ -212,7 +212,7 @@ const LoadImageModal = ({
                 onChange={(val) => {
                   setS3Bucket(val);
                   resetObjects();
-                  if (val) loadS3Objects(val);
+                  if (val && s3Buckets.some((b) => b.value === val)) loadS3Objects(val);
                 }}
                 options={s3Buckets}
                 placeholder="Select or type a bucket name"

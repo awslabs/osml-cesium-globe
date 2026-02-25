@@ -14,6 +14,8 @@ import Logo from "@/components/Logo";
 import FeaturePopup, { type FeaturePopupData } from "@/components/FeaturePopup";
 import ConfigWarnings from "@/components/alert/ConfigWarnings";
 import { ResourceProvider } from "@/context/ResourceContext";
+import { AnalyticsProvider } from "@/context/AnalyticsContext";
+import { AnalyticsPanel } from "@/components/analytics";
 import type { ImageRequestState } from "@/types";
 
 /** Natural Earth II fallback (offline, bundled with Cesium) */
@@ -45,6 +47,7 @@ const App = () => {
 
   const [baseLayer, setBaseLayer] = useState<Cesium.ImageryLayer | null>(null);
   const [featurePopupData, setFeaturePopupData] = useState<FeaturePopupData | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Callback for feature clicks -- called from cesiumHelper
   const handleFeaturePopup = useCallback((data: FeaturePopupData | null) => {
@@ -101,22 +104,56 @@ const App = () => {
       fullscreenButton={false}
     >
       <ResourceProvider>
-        <Logo />
-        <OsmlTray
-          imageRequestStatus={imageRequestStatus}
-          setImageRequestStatus={setImageRequestStatus}
-          onFeatureClick={handleFeaturePopup}
-        />
-        <StatusDisplay
-          imageRequestStatus={imageRequestStatus}
-          setImageRequestStatus={setImageRequestStatus}
-        />
-        {featurePopupData && (
-          <FeaturePopup
-            data={featurePopupData}
-            onClose={() => setFeaturePopupData(null)}
+        <AnalyticsProvider>
+          <Logo />
+          <OsmlTray
+            imageRequestStatus={imageRequestStatus}
+            setImageRequestStatus={setImageRequestStatus}
+            onFeatureClick={handleFeaturePopup}
           />
-        )}
+          <div className="analytics-toggle">
+            <button
+              onClick={() => setShowAnalytics((prev) => !prev)}
+              title="Toggle Analytics Panel"
+              style={{
+                background: showAnalytics ? "rgba(0, 115, 187, 0.3)" : "rgba(12, 15, 22, 0.7)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "10px",
+                padding: "8px 12px",
+                cursor: "pointer",
+                color: "rgba(255, 255, 255, 0.8)",
+                fontSize: "13px",
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="8" width="3" height="7" rx="1" fill="currentColor" opacity="0.6" />
+                <rect x="5.5" y="5" width="3" height="10" rx="1" fill="currentColor" opacity="0.7" />
+                <rect x="10" y="2" width="3" height="13" rx="1" fill="currentColor" opacity="0.9" />
+              </svg>
+              Analytics
+            </button>
+          </div>
+          {showAnalytics && (
+            <AnalyticsPanel onClose={() => setShowAnalytics(false)} />
+          )}
+          <StatusDisplay
+            imageRequestStatus={imageRequestStatus}
+            setImageRequestStatus={setImageRequestStatus}
+          />
+          {featurePopupData && (
+            <FeaturePopup
+              data={featurePopupData}
+              onClose={() => setFeaturePopupData(null)}
+            />
+          )}
+        </AnalyticsProvider>
       </ResourceProvider>
     </ResiumViewer>
     </>

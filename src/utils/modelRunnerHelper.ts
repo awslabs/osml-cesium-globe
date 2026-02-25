@@ -191,13 +191,14 @@ async function monitorJobStatus(
               const processingDuration =
                 messageAttributes.processing_duration.Value;
               done = true;
-              setImageRequestStatus({
+              setImageRequestStatus((prev) => ({
                 state: "success",
                 data: {
+                  ...prev.data,
                   ...resultData,
                   processingDuration: processingDuration
                 }
-              });
+              }));
               logger.info(`SUCCESS message found! Image took ${processingDuration} seconds to process`);
               done = true;
             } else if (
