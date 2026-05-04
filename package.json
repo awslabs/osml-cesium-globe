@@ -36,7 +36,7 @@
     "config-ini-parser": "^1.6.1",
     "electron-updater": "^6.8.3",
     "resium": "^1.19.4",
-    "uuid": "^13.0.0"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
