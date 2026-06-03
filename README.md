@@ -1,3 +1,7 @@
+> **⚠️ This repository has been archived and is no longer maintained.** It was a demonstration application created to experiment
+> with user interface concepts that are no longer maintained by the OversightML team. Developers interested in the application are 
+> encouraged to fork this repository and build an application that meets their own needs.
+
 # OSML Cesium Globe
 
 A desktop application for visualizing and interacting with geospatial image processing results from the [OversightML](https://github.com/aws-solutions-library-samples/osml-model-runner) ecosystem. Built with CesiumJS, React, and Electron.
